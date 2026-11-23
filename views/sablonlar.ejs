@@ -1,0 +1,65 @@
+<%- include('partials/ust', { aktifSayfa: 'sablonlar' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Doküman Şablon Tasarımcısı</h1>
+    <p>Her doküman türü için kurumsal sayfa düzenini, antet rengini, kenarlık stilini, alt bilgi kutularını ve standart bölümleri tanımlayın.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/dokumanlar">Dokümanlar</a>
+  </div>
+</div>
+
+<div class="bilgi-kutu" style="margin-bottom:18px;">
+  <strong>Nasıl çalışır?</strong> Her tür için tek bir aktif şablon bulunur. Şablondaki bölümler yeni doküman formunda otomatik görünür; antet rengi, kenarlık stili, logo ve alt bilgi etiketleri üretilen PDF’lere uygulanır. Değişikliklerden sonra <strong>PDF Önizleme</strong> ile tasarımı kontrol edebilirsiniz.
+</div>
+
+<div class="sablon-grid">
+  <% sablonlar.forEach(function (sablon) { %>
+    <article class="sablon-karti" style="--tur-renk: <%= sablon.tur.renk %>">
+      <div class="sablon-karti-bas">
+        <span class="tur-secici-ikon" style="background:<%= sablon.tur.renk %>"><%= sablon.tur.kod %></span>
+        <div class="sablon-karti-baslik">
+          <strong><%= sablon.tur.ad %></strong>
+          <span><%= sablon.baslik %></span>
+        </div>
+        <span class="sablon-renk" style="background: <%= sablon.antet_renk %>" title="Antet rengi: <%= sablon.antet_renk %>"></span>
+      </div>
+
+      <div class="sablon-onizleme" style="--antet: <%= sablon.antet_renk %>">
+        <div class="sablon-onizleme-antet">
+          <span class="sablon-onizleme-logo"><%= sirket ? sirketBasHarfleri : 'QD' %></span>
+          <span class="sablon-onizleme-sirket"><%= sirket ? sirket.ad : 'Şirket Adı' %></span>
+        </div>
+        <div class="sablon-onizleme-tablo">
+          <span><%= sablon.tur.kod %>-000</span><span>Rev.00</span><span>—</span>
+        </div>
+        <div class="sablon-onizleme-baslik"><%= sablon.tur.ad %> Başlığı</div>
+        <div class="sablon-onizleme-bolumler">
+          <% sablon.bolumler.slice(0, 4).forEach(function (bolum, indeks) { %>
+            <span class="sablon-onizleme-cizgi" style="width:<%= 92 - indeks * 12 %>%"></span>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="sablon-meta">
+        <div><span class="sablon-meta-etiket">Bölüm</span><strong><%= sablon.bolumSayisi %></strong></div>
+        <div><span class="sablon-meta-etiket">Kenarlık</span><strong><%= sablon.kenarlik_stili === 'kesikli' ? 'Kesikli' : sablon.kenarlik_stili === 'cift' ? 'Çift' : 'Düz' %></strong></div>
+        <div><span class="sablon-meta-etiket">Logo</span><strong><%= sablon.logo_yolu ? 'Özel' : 'Şirket' %></strong></div>
+        <div><span class="sablon-meta-etiket">Güncelleme</span><strong><%= sablon.guncelleme_tarihi ? tarihTr(String(sablon.guncelleme_tarihi).slice(0, 10)) : '—' %></strong></div>
+      </div>
+
+      <div class="sablon-bolum-etiketleri">
+        <% sablon.bolumler.slice(0, 4).forEach(function (bolum) { %><span class="cip"><%= bolum.baslik %></span><% }) %>
+        <% if (sablon.bolumler.length > 4) { %><span class="cip">+<%= sablon.bolumler.length - 4 %></span><% } %>
+      </div>
+
+      <div class="sablon-eylem">
+        <a class="btn btn-birincil btn-kucuk" href="/sablonlar/<%= sablon.tur_kod %>">Şablonu Düzenle</a>
+        <a class="btn btn-hayalet btn-kucuk" href="/sablonlar/<%= sablon.tur_kod %>/onizleme" target="_blank" rel="noopener">PDF Önizleme</a>
+      </div>
+    </article>
+  <% }) %>
+</div>
+
+<%- include('partials/alt') %>

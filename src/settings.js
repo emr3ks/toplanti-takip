@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const { mantiksal } = require('./config');
 const { gecerliSaat, gecerliSaatDilimi } = require('./dates');
@@ -13,6 +13,8 @@ const SAAT_DILIMLERI = Object.freeze([
 ]);
 
 const ANAHTARLAR = Object.freeze([
+  'sirket_adi',
+  'sirket_logo',
   'smtp_host',
   'smtp_port',
   'smtp_secure',
@@ -25,6 +27,8 @@ const ANAHTARLAR = Object.freeze([
   'saat_dilimi',
   'test_modu',
 ]);
+
+const VARSAYILAN_SIRKET_ADI = 'Kurumsal Kalite Yönetim Sistemi';
 
 function dbAyarlari(db) {
   const sonuc = {};
@@ -96,7 +100,7 @@ function etkinAyarlar(db, config) {
       user: sec('smtp_user', ''),
       pass: sec('smtp_pass', ''),
       fromEmail: sec('smtp_from_email', ''),
-      fromName: sec('smtp_from_name', 'Toplantı Takip'),
+      fromName: sec('smtp_from_name', 'Kurumsal Kalite Yönetim Sistemi'),
     },
     raporAlici: sec('rapor_alici', ''),
     hatirlatmaSaati: sec('hatirlatma_saati', '09:00'),
@@ -139,6 +143,35 @@ function guvenliAyarlar(ayarlar) {
 
 function testModuEtkin(ayarlar) {
   return Boolean(ayarlar.testModu) || !ayarlar.smtp.host;
+}
+
+/** PDF antetlerinde ve arayüzde kullanılan şirket bilgileri. */
+function sirketAyarlari(db) {
+  const degerler = dbAyarlari(db);
+  const ad = String(degerler.sirket_adi || '').trim();
+  return {
+    ad: ad || VARSAYILAN_SIRKET_ADI,
+    logo: String(degerler.sirket_logo || '').trim(),
+  };
+}
+
+function sirketAyarlariKaydet(db, { ad, logo } = {}) {
+  const sirketAdi = metin(ad);
+  if (sirketAdi.length < 2 || sirketAdi.length > 120) {
+    throw new Error('Şirket adı 2-120 karakter arasında olmalıdır.');
+  }
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    ayarYaz(db, 'sirket_adi', sirketAdi);
+    if (logo !== undefined) {
+      ayarYaz(db, 'sirket_logo', logo);
+    }
+    db.exec('COMMIT');
+  } catch (hata) {
+    db.exec('ROLLBACK');
+    throw hata;
+  }
+  return sirketAyarlari(db);
 }
 
 function mailModu(ayarlar) {
@@ -248,11 +281,14 @@ function ayarlariKaydet(db, girdi, config) {
 
 module.exports = {
   SAAT_DILIMLERI,
+  VARSAYILAN_SIRKET_ADI,
   etkinAyarlar,
   guvenliAyarlar,
   ayarlarFormu,
   ayarlariKaydet,
   dbAyarlari,
+  sirketAyarlari,
+  sirketAyarlariKaydet,
   testModuEtkin,
   mailModu,
 };

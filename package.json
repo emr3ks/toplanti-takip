@@ -1,24 +1,27 @@
 {
   "name": "toplanti-takip",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Türkçe arayüzlü, SQLite tabanlı toplantı notları, iş takibi ve otomatik e-posta/hatırlatma uygulaması.",
+  "description": "Türkçe arayüzlü Kurumsal Kalite Yönetim Sistemi (QDMS): kullanıcı/rol yönetimi, doküman şablonları, otomatik PDF üretimi, onay akışı ve toplantı takibi.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test --test-concurrency=1 test/app.test.js test/dates.test.js test/mailer.test.js test/reminder.test.js test/scheduler.test.js test/settings.test.js",
+    "test": "node --test --test-concurrency=1 test/app.test.js test/auth.test.js test/qdms.test.js test/dates.test.js test/mailer.test.js test/reminder.test.js test/scheduler.test.js test/settings.test.js",
     "demo": "node scripts/demo-verisi.js"
   },
   "engines": {
     "node": ">=24.0.0"
   },
   "keywords": [
+    "qdms",
+    "kalite-yonetim-sistemi",
+    "dokuman-yonetimi",
+    "pdf",
+    "onay-akisi",
     "toplanti",
     "gorev-takibi",
     "sqlite",
-    "nodemailer",
-    "node-cron",
     "turkce"
   ],
   "license": "MIT",
@@ -26,7 +29,9 @@
     "dotenv": "^18.0.10",
     "ejs": "^7.0.2",
     "express": "^5.3.0",
+    "multer": "^2.5.0",
     "node-cron": "^4.6.0",
-    "nodemailer": "^10.6.1"
+    "nodemailer": "^10.6.1",
+    "pdfkit": "^0.21.0"
   }
 }

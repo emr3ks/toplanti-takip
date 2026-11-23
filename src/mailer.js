@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -12,7 +12,7 @@ function fromAdresi(smtp) {
   const adres = smtp.fromEmail || smtp.user;
   if (!adres) return null;
   return {
-    name: smtp.fromName || 'Toplantı Takip',
+    name: smtp.fromName || 'Kurumsal Kalite Yönetim Sistemi',
     address: adres,
   };
 }

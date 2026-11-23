@@ -1,0 +1,42 @@
+<%- include('partials/ust', { aktifSayfa: 'dokuman-yeni', aktifTur: tur.kod }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Yeni <%= tur.ad %></h1>
+    <p>Doküman türünü seçin, şablon bölümlerini doldurun ve kurumsal antetli PDF’inizi otomatik üretin.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/dokumanlar<%= '?tur=' + tur.kod %>">Dokümanlara Dön</a>
+  </div>
+</div>
+
+<div class="tur-secici" aria-label="Doküman türü seçimi">
+  <% TUR_KODLARI.forEach(function (kod) { const t = DOKUMAN_TURLERI[kod]; %>
+    <a class="tur-secici-kart <%= t.kod === tur.kod ? 'aktif' : '' %>" href="/dokumanlar/yeni?tur=<%= t.kod %>" style="--tur-renk: <%= t.renk %>">
+      <span class="tur-secici-ikon"><%= t.kod %></span>
+      <span class="tur-secici-metin">
+        <strong><%= t.ad %></strong>
+        <small><%= t.aciklama %></small>
+      </span>
+      <span class="tur-secici-kod mono"><%= t.kod %>-001</span>
+    </a>
+  <% }) %>
+</div>
+
+<%- include('partials/dokuman-form', {
+  islem: '/dokumanlar/yeni',
+  tur: tur,
+  kod: kod,
+  bolumler: bolumler,
+  departmanlar: departmanlar,
+  seciliDepartmanlar: seciliDepartmanlar,
+  form: form,
+  dosyaVar: false,
+  dosyaAdi: '',
+  kaydetEtiketi: 'Dokümanı Oluştur',
+  donusLink: '/dokumanlar?tur=' + tur.kod,
+  sablon: sablon,
+  dokuman: null
+}) %>
+
+<%- include('partials/alt') %>

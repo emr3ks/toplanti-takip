@@ -21,7 +21,7 @@ function main() {
 
   const sunucu = app.listen(config.port, config.host, () => {
     console.log('');
-    console.log('  Toplantı Takip çalışıyor');
+    console.log('  QDMS — Kurumsal Kalite Yönetim Sistemi çalışıyor');
     console.log(`  Adres          : http://${config.host}:${config.port}`);
     console.log(`  Veritabanı     : ${config.dbPath}`);
     console.log(
@@ -30,6 +30,7 @@ function main() {
     console.log(
       `  Hatırlatma     : ${config.cronKapali ? 'kapalı (DISABLE_CRON=1)' : `her gün ${ayarlar.hatirlatmaSaati} (${ayarlar.saatDilimi})`}`
     );
+    console.log('  İlk giriş      : README.md dosyasındaki varsayılan yönetici hesabı');
     console.log('');
   });
 

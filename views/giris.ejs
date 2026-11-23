@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giriş · <%= sirket ? sirket.ad : 'Kalite Yönetim Sistemi' %></title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="giris-sayfasi">
+  <main class="giris-kabuk">
+    <section class="giris-tanitim">
+      <div class="giris-tanitim-icerik">
+        <span class="giris-rozet">Kurumsal Kalite Yönetim Sistemi</span>
+        <h1>Dokümanlarınız, onaylarınız ve ekibiniz tek yerde.</h1>
+        <p>Prosedürlerden formlara kadar tüm kalite dokümanlarını şablonlarla üretin, çok aşamalı onaydan geçirin ve “Okudum, Anladım” takibini yapın. Toplantı ve aksiyon takibi artık QDMS’in bir modülü.</p>
+        <ul class="giris-liste">
+          <li><span class="giris-tik">✓</span> Rol bazlı yetkilendirme ve departman yönetimi</li>
+          <li><span class="giris-tik">✓</span> Antetli, filigranlı ve sayfa numaralı otomatik PDF</li>
+          <li><span class="giris-tik">✓</span> Revizyon geçmişi ve dağıtım / okuma takibi</li>
+        </ul>
+        <div class="giris-alt-not">
+          <span class="marka-ikon kucuk"><%= sirketBasHarfleri || 'QD' %></span>
+          <div><strong><%= sirket ? sirket.ad : 'Kurumsal Kalite Yönetim Sistemi' %></strong><small>Faz 1 &amp; 2 · Doküman Yönetimi</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="giris-kutu">
+      <div class="giris-kart">
+        <div class="giris-bas">
+          <span class="giris-logo"><%= sirketBasHarfleri || 'QD' %></span>
+          <h2>Sisteme giriş yapın</h2>
+          <p>Kurumsal hesabınızla devam edin.</p>
+        </div>
+
+        <% if (hata) { %>
+          <div class="bildirim bildirim-hata" role="alert"><span class="bildirim-ikon">!</span><div><%= hata %></div></div>
+        <% } %>
+
+        <form method="post" action="/giris" class="dikey">
+          <input type="hidden" name="donus" value="<%= donus %>">
+          <div class="alan">
+            <label for="giris-email">E-posta adresi</label>
+            <input class="girdi" type="email" id="giris-email" name="email" value="<%= email || '' %>" placeholder="ornek@sirket.com" autocomplete="username" required autofocus>
+          </div>
+          <div class="alan">
+            <label for="giris-sifre">Şifre</label>
+            <input class="girdi" type="password" id="giris-sifre" name="sifre" placeholder="Şifreniz" autocomplete="current-password" required>
+          </div>
+          <button class="btn btn-birincil btn-blok" type="submit">Giriş Yap</button>
+        </form>
+
+        <div class="giris-bilgi">
+          <strong>İlk kurulum:</strong> İlk çalıştırmada otomatik bir <span class="mono">Sistem Yöneticisi</span> hesabı oluşturulur. Giriş bilgileri <span class="mono">README.md</span> dosyasında yer alır; ilk girişten sonra şifrenizi Organizasyon sayfasından değiştirin.
+        </div>
+      </div>
+      <p class="giris-footer">© <%= new Date().getFullYear() %> <%= sirket ? sirket.ad : 'Kurumsal Kalite Yönetim Sistemi' %> · Yerel SQLite · Port 3005</p>
+    </section>
+  </main>
+</body>
+</html>

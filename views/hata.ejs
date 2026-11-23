@@ -10,7 +10,7 @@
       </svg>
     </div>
     <h3>Beklenmeyen bir hata oluştu</h3>
-    <p>İşlem tamamlanamadı. Ayrıntılar sunucu konsoluna yazıldı. Lütfen tekrar deneyin.</p>
+    <p><%= typeof hataMesaji !== 'undefined' && hataMesaji ? hataMesaji : 'İşlem tamamlanamadı. Ayrıntılar sunucu konsoluna yazıldı. Lütfen tekrar deneyin.' %></p>
     <a class="btn btn-birincil" href="/">Genel Bakışa Dön</a>
   </div>
 </div>

@@ -1,35 +1,37 @@
-# Toplantı Takip
+# QDMS — Kurumsal Kalite Yönetim Sistemi
 
-Yerel bilgisayarda çalışan, verileri SQLite veritabanında saklayan Türkçe arayüzlü bir **toplantı notları ve iş takip** uygulaması.
+Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bir **Kalite Yönetim Sistemi (QDMS)**. Kullanıcı ve rol yönetimi, departmanlar, doküman şablonları, otomatik antetli PDF üretimi, çok aşamalı onay, revizyon geçmişi ve **“Okudum, Anladım”** takibi Faz 1 & 2 kapsamında hazırdır. Mevcut **Toplantı ve Aksiyon Takibi** modülü aynı uygulama içinde korunmuştur.
 
-Toplantı oluşturup işleri sorumlulara atayabilir, hedef tarihleri takip edebilir, işleri **Aktif / Beklemede / Tamamlandı** durumları arasında tek tıkla taşıyabilirsiniz. Toplantı sonunda şık bir HTML raporu e-posta ile gönderebilir, her gün belirlenen saatte yaklaşan işler için sorumlulara otomatik hatırlatma yaptırabilirsiniz.
+## Öne Çıkanlar
 
-## Özellikler
-
-- **Sorumlu yönetimi:** Ad ve e-posta ile kişi ekleme, düzenleme, silme.
-- **Toplantı yönetimi:** Toplantı adı ve tarihiyle kayıt oluşturma; toplantıya ait güncel işleri tek ekranda listeleme.
-- **İş takibi:** Toplantı içine iş ekleme; sorumlu, hedef tarih ve toplantı notu belirleme.
-- **Durum yönetimi:** `Aktif`, `Beklemede`, `Tamamlandı` durumları; “Beklemede” sekmesinden tek tıkla `Aktif` durumuna döndürme.
-- **Toplantı sonu raporu:** “Toplantıyı Tamamla ve Rapor Gönder” butonu; notları ve aktif/bekleyen/tamamlanan işleri özetleyen HTML raporunu tanımlı alıcıya gönderir.
-- **Otomatik hatırlatma:** `node-cron` ile her gün belirlenen saatte; durumu `Aktif` olan ve hedef tarihine 1 gün kalmış, bugünü gelmiş veya gecikmiş işler için sorumluya e-posta gönderir.
-- **Mükerrer gönderim koruması:** Her işte `hatirlatma_gonderildi` alanı tutulur; aynı iş için tekrar hatırlatma gönderilmez.
-- **Test modu:** SMTP tanımlı değilken veya test modu açıkken e-postalar gönderilmez; `data/outbox` klasörüne HTML olarak kaydedilir ve E-posta Günlüğü sayfasından görüntülenebilir.
-- **Türkçe arayüz:** Duyarlı tasarım, durum renkleri, tablolar ve boş durum ekranları.
-- **Otomatik testler:** Sahte SMTP sunucusuyla gerçek Nodemailer gönderim yolu, hatırlatma kuralları, mükerrer gönderim, form akışları ve HTML kaçışları test edilir.
+- **Kurumsal sol menü:** Dashboard, Doküman Yönetimi (Prosedür `PR`, Talimat `TL`, El Kitabı `EK`, Liste `LS`, Form `FR`), Doküman Şablon Tasarımcısı, Eğitim Yönetimi (yer tutucu), Toplantı ve Aksiyon Takibi, Organizasyon ve Kullanıcılar, Sistem Ayarları.
+- **Giriş ve rol bazlı yetkilendirme:** Sistem Yöneticisi, Kalite Yöneticisi, Doküman Hazırlayan, Onaylayan, Standart Kullanıcı. İlk kurulumda otomatik yönetici hesabı oluşturulur.
+- **Departman yönetimi:** Üretim, Kalite Güvence, İnsan Kaynakları, Bakım, Satın Alma hazır gelir; yeni birim eklenebilir, kullanıcılar departmanlara atanır.
+- **Şablon tasarımcısı:** Her doküman türü için bölüm başlıkları, açıklamalar, zorunluluk, antet rengi, kenarlık stili, logo ve hazırlayan/onaylayan alt bilgi etiketleri tanımlanır. PDF önizlemesi anında alınır.
+- **Otomatik kod ve PDF:** `PR-001`, `TL-001`, `EK-001`, `LS-001`, `FR-001` kodları otomatik atanır. Kurumsal antet, doküman kodu, yayın tarihi, `Rev.00`, `Sayfa 1/X`, hazırlayan/onaylayan kutuları ve Türkçe karakter desteğiyle PDF üretilir.
+- **Onay ve revizyon:** `Taslak` → `Kontrol / Onay Bekliyor` → `Yayında` → `İptal / Arşiv`. Taslak PDF’inde **TASLAK** filigranı vardır; onaylandığında filigran kalkar, onaylayan ve onay tarihi belgeye işlenir. Yeni revizyon eski revizyonu arşivler; değişiklik notları saklanır.
+- **Dağıtım ve okuma takibi:** Doküman yayınlandığında seçilen departman personeline bildirim düşer; personel “Okudum, Anladım” onayı verir. Kalite yöneticisi yüzdelik ve isim listesiyle takip eder.
+- **İsteğe bağlı hazır dosya:** Sistem PDF’i üretmek yerine PDF/Excel dosyası yüklenebilir.
+- **Toplantı modülü:** Mevcut toplantı, iş, sorumlu, rapor ve hatırlatma akışları QDMS içinde çalışmaya devam eder.
+- **Varsayılan port:** `3005` (`PORT` ortam değişkeniyle değiştirilebilir). Tüm tablolar SQLite’tadır.
 
 ## Ekran Görüntüleri
 
-| Genel Bakış | Toplantı Detayı |
+| Dashboard | Doküman Yönetimi |
 | --- | --- |
-| ![Genel Bakış](docs/screenshots/after-genel-bakis.png) | ![Toplantı Detayı](docs/screenshots/after-toplanti-detay.png) |
+| ![Dashboard](docs/screenshots/after-qdms-dashboard.png) | ![Doküman Yönetimi](docs/screenshots/after-qdms-dokumanlar.png) |
 
-| Toplantılar | İşler / Beklemede |
+| Doküman Detayı | Şablon Tasarımcısı |
 | --- | --- |
-| ![Toplantılar](docs/screenshots/after-toplantilar.png) | ![Bekleyen İşler](docs/screenshots/after-bekleyen-isler.png) |
+| ![Doküman Detayı](docs/screenshots/after-qdms-dokuman-detay.png) | ![Şablon Tasarımcısı](docs/screenshots/after-qdms-sablonlar.png) |
 
-| Ayarlar | Toplantı Raporu (E-posta) |
+| Taslak PDF (TASLAK filigranı) | Giriş Ekranı |
 | --- | --- |
-| ![Ayarlar](docs/screenshots/after-ayarlar.png) | ![Rapor E-postası](docs/screenshots/after-rapor-eposta.png) |
+| ![Taslak PDF](docs/screenshots/after-qdms-taslak-pdf.png) | ![Giriş](docs/screenshots/after-qdms-giris.png) |
+
+| Organizasyon ve Kullanıcılar | Toplantı Modülü |
+| --- | --- |
+| ![Organizasyon](docs/screenshots/after-qdms-organizasyon.png) | ![Toplantılar](docs/screenshots/after-qdms-toplantilar.png) |
 
 ## Teknolojiler
 
@@ -38,17 +40,18 @@ Toplantı oluşturup işleri sorumlulara atayabilir, hedef tarihleri takip edebi
 | Sunucu | Node.js, Express 5 |
 | Arayüz | EJS sunucu taraflı şablonlar, saf CSS/JS |
 | Veritabanı | SQLite (`node:sqlite`, ek native derleme gerekmez) |
+| PDF | PDFKit (Unicode TTF gömme, filigran, sayfa numarası) |
+| Dosya yükleme | Multer (logo, PDF/Excel) |
 | E-posta | Nodemailer |
 | Zamanlayıcı | node-cron |
-| Test | Node.js yerleşik `node:test`, sahte SMTP sunucusu |
+| Test | Node.js yerleşik `node:test`, HTTP üzerinden uçtan uca akışlar |
 
 ## Gereksinimler
 
 - **Node.js 24 veya üzeri** (Node 26 ile test edildi)
 - npm
-- E-posta göndermek için bir SMTP hesabı (ör. Gmail uygulama şifresi). Test modunda SMTP gerekmez.
-
-> `node:sqlite` Node.js 22.5 ile deneysel olarak geldi; bu proje Node 24+ hedefler. Node sürümünüzü `node --version` ile kontrol edin.
+- PDF’lerde Türkçe karakterler için işletim sisteminde bir Unicode yazı tipi (Windows’ta Segoe UI/Arial, Linux’ta DejaVu Sans, macOS’ta Arial otomatik aranır). İsterseniz `PDF_FONT_YOLU` ve `PDF_FONT_KALIN_YOLU` ile kendi TTF dosyalarınızı gösterebilirsiniz.
+- E-posta göndermek için SMTP hesabı. Test modunda SMTP gerekmez.
 
 ## Kurulum
 
@@ -70,112 +73,224 @@ macOS/Linux:
 cp .env.example .env
 ```
 
-`.env` dosyasını düzenleyebilir veya tüm ayarları uygulamadaki **Ayarlar** sayfasından girebilirsiniz. Arayüzde doldurulan değerler veritabanına yazılır; boş alanlar `.env` değerine, o da yoksa varsayılana düşer.
-
 Uygulamayı başlatın:
 
 ```bash
 npm start
 ```
 
-Ardından tarayıcıda **http://127.0.0.1:3000** adresini açın.
+Tarayıcıda **http://127.0.0.1:3005** adresini açın. Farklı bir port için `.env` içinde `PORT=3006` gibi bir değer verin.
 
-Geliştirme sırasında otomatik yeniden başlatma için:
+### İlk Giriş (Varsayılan Yönetici)
+
+İlk çalıştırmada veritabanı boşsa otomatik olarak bir **Sistem Yöneticisi** hesabı oluşturulur:
+
+| Rol | E-posta | Şifre |
+| --- | --- | --- |
+| Sistem Yöneticisi | `admin@qdms.local` | `Admin123!` |
+
+> İlk girişten sonra **Organizasyon ve Kullanıcılar → Şifre Değiştir** bölümünden şifreyi değiştirin. Bu bilgiler yalnızca ilk kurulum içindir; üretim ortamında mutlaka değiştirilmelidir.
+
+## Roller ve Yetkiler
+
+| Rol | Yetkiler |
+| --- | --- |
+| **Sistem Yöneticisi** (`admin`) | Tüm modüller, kullanıcı/departman yönetimi, şirket ve SMTP ayarları, onay ve arşivleme |
+| **Kalite Yöneticisi** (`kalite`) | Şablon tasarımı, doküman oluşturma/düzenleme, onaylama, dağıtım ve okuma takibi |
+| **Doküman Hazırlayan** (`hazirlayan`) | Doküman oluşturma, kendi taslaklarını düzenleme ve onaya gönderme |
+| **Onaylayan** (`onaylayan`) | Kontrol / onay bekleyen dokümanları onaylama veya iade etme |
+| **Standart Kullanıcı** (`kullanici`) | Kendisine dağıtılan yayınlanmış dokümanları okuma ve “Okudum, Anladım” onayı verme |
+
+Yetkisiz sayfalara erişim `403`, oturum yoksa giriş ekranına yönlendirme ile korunur. Tüm POST işlemleri oturum gerektirir.
+
+## Modüller
+
+### 1. Dashboard
+
+- Bekleyen onaylar (onaylama yetkisi olanlara), okunmamış dokümanlar, yayındaki doküman sayısı ve toplantı/iş özetleri.
+- Bildirimler, doküman tür dağılımı, son dokümanlar ve son toplantılar.
+- Bildirimler tek tıkla okundu işaretlenebilir.
+
+### 2. Doküman Yönetimi
+
+- Tür sekmeleri ve durum filtresiyle listeleme, kod/başlık/açıklama araması.
+- Her doküman için revizyon, durum, hazırlayan ve okunma yüzdesi görünür.
+- Standart kullanıcı yalnızca kendisine dağıtılan yayınlanmış dokümanları görür; taslaklar hazırlayan ve kalite ekibiyle sınırlıdır.
+
+### 3. Doküman Şablon Tasarımcısı
+
+- Her tür için ayrı şablon: şablon adı, antet/tablo rengi, kenarlık stili (düz/kesikli/çift), şablona özel logo, alt bilgi etiketleri.
+- Bölüm düzenleyici: başlık, kullanıcıya gösterilen ipucu ve zorunlu/isteğe bağlı seçimi.
+- PDF önizleme, tasarımı kaydetmeden önce görsel doğrulama sağlar.
+- Logo yüklenmezse **Sistem Ayarları**’ndaki şirket logosu, o da yoksa şirket baş harfleri kullanılır.
+
+### 4. Doküman Oluşturma ve PDF
+
+1. Doküman türü seçilir; sıradaki kod otomatik hesaplanır (`PR-001`, `PR-002`, …).
+2. Şablon bölümleri form alanları olarak gelir; zorunlu bölümler boş bırakılamaz.
+3. Hedef departmanlar seçilir (en az bir zorunlu).
+4. “Dokümanı Oluştur” ile **Taslak** kaydı oluşur.
+5. `PDF’i Aç` / `PDF İndir` bağlantısı belgeyi üretir. PDF’de:
+   - şirket adı ve logo,
+   - doküman kodu, türü, revizyonu ve yayın tarihi tablosu,
+   - başlık ve bölüm içerikleri,
+   - hazırlayan ve onaylayan alt bilgi kutuları,
+   - `Sayfa 1/X` numarası,
+   - taslak durumunda çapraz **TASLAK** filigranı bulunur.
+6. İsteğe bağlı olarak hazır PDF/Excel dosyası yüklenebilir (en fazla 10 MB). Bu durumda hazır dosya indirilebilir; sistem PDF’i yerine yüklenen dosya kullanılır.
+
+### 5. Onay Akışı ve Revizyon Yönetimi
+
+| Durum | Açıklama |
+| --- | --- |
+| `Taslak` | Hazırlanıyor; yalnızca hazırlayan ve kalite ekibi görür. PDF’de `TASLAK` filigranı vardır. |
+| `Kontrol / Onay Bekliyor` | Onaya gönderildi; onaylayanlar inceler. |
+| `Yayında` | Onaylandı; filigran kalkar, onaylayan/tarih PDF antetine işlenir, dağıtım başlar. |
+| `İptal / Arşiv` | Yürürlükten kaldırıldı veya yeni revizyonla arşivlendi. Geçmiş korunur. |
+
+- **Onaya Gönder:** Hazırlayan veya kalite ekibi, hedef departman ve içerik kontrolünden sonra gönderir; onaylayanlara bildirim gider.
+- **Onayla ve Yayınla:** Onaylayan/kalite yöneticisi/yönetici yapar. Onaylayan ve onay tarihi kaydedilir, hedef departman personeline okuma bildirimi oluşturulur.
+- **Reddet / İade Et:** Gerekçe zorunludur; doküman taslağa döner, hazırlayana bildirim gider.
+- **Yeni Revizyon:** Yayındaki veya arşivdeki en güncel revizyon için değişiklik notuyla açılır. Önceki revizyon otomatik `İptal / Arşiv` olur; tüm revizyonlar ve notlar saklanır.
+- **İptal / Arşivle:** Yetkili kullanıcı dokümanı yürürlükten kaldırır.
+
+### 6. Dağıtım ve “Okudum, Anladım” Takibi
+
+- Yayınlama anında hedef departmanların aktif kullanıcıları için okuma kaydı ve bildirim oluşturulur.
+- Standart kullanıcı doküman detayında **“✓ Okudum, Anladım”** butonunu görür; onay zamanı kaydedilir.
+- Kalite yöneticisi/yönetici, detay sayfasında okunma yüzdesini ve personel bazında okudu/bekliyor listesini görür.
+- Yeni revizyon yayınlandığında okuma takibi yeni revizyon için yeniden başlar.
+
+### 7. Eğitim Yönetimi
+
+Faz 1 kapsamında **yer tutucu** menüdür; eğitim kataloğu, atama ve yeterlilik takibi sonraki faza bırakılmıştır.
+
+### 8. Toplantı ve Aksiyon Takibi
+
+Önceki sürümdeki toplantı, iş, sorumlu, e-posta raporu ve otomatik hatırlatma akışları aynen kullanılabilir. Sol menüde “Toplantı ve Aksiyon Takibi” altında Toplantılar, İşler ve Sorumlular bulunur.
+
+### 9. Organizasyon ve Kullanıcılar
+
+- Sistem Yöneticisi yeni departman açar/düzenler/siler (kullanıcı atanmış departman silinemez).
+- Kullanıcı oluşturma, rol ve departman atama, hesabı aktif/pasif yapma, şifre belirleme.
+- Her kullanıcı kendi şifresini değiştirebilir. Sistemde en az bir aktif yönetici kalması korunur.
+
+### 10. Sistem Ayarları
+
+- **Şirket Kimliği:** Şirket adı ve logosu; PDF antetlerinde kullanılır.
+- **SMTP:** Sunucu, port, SSL/TLS, kullanıcı, şifre, gönderen adı/e-postası. Gmail için uygulama şifresi gerekir.
+- **Rapor ve Hatırlatma:** Toplantı raporu alıcısı, günlük hatırlatma saati, saat dilimi, test modu.
+- **Test araçları:** SMTP bağlantı testi, test e-postası, hatırlatmayı elle çalıştırma.
+- Varsayılan sunucu portu `3005`’tir.
+
+## PDF Tasarımı
+
+- A4 dikey sayfa, kurumsal antet bandı ve dört hücreli doküman bilgi tablosu (kod, tür, revizyon, yayın tarihi).
+- Bölüm başlıkları renkli işaretle, gövde metni satır sonu ve paragrafları koruyarak yazılır.
+- Alt bilgide hazırlayan ve onaylayan kutuları; onay öncesi “Onay bekliyor”, yayında onay tarihi görünür.
+- Her sayfada `Sayfa X/Y` ve doküman kodu.
+- Taslakta her sayfada açılı **TASLAK** filigranı.
+- Türkçe karakterler için Unicode TTF gömülür; font bulunamazsa güvenli bir yedek yazı tipi ve Türkçe karakter dönüşümü kullanılır.
+
+## Demo Verisi
+
+Ekran görüntülerindeki gibi örnek verilerle denemek için:
 
 ```bash
-npm run dev
+npm run demo
+npm start
 ```
 
-## İlk Kullanım
+Mevcut demo verilerini silip yeniden oluşturmak için:
 
-1. **Sorumlular** sayfasından ad ve e-posta ile kişileri ekleyin.
-2. **Toplantılar** sayfasından bir toplantı adı ve tarihi ile toplantı oluşturun.
-3. Toplantı detayında **Yeni İş Ekle** formunu kullanarak işi, sorumlusunu, hedef tarihini ve notunu girin.
-4. İş kartlarındaki **Beklemeye Al**, **Tamamla** ve **Aktif Yap** düğmeleriyle durumu değiştirin.
-5. **Ayarlar** sayfasında rapor alıcısını, SMTP bilgilerini ve günlük hatırlatma saatini tanımlayın.
-6. Toplantı detayında **Toplantıyı Tamamla ve Rapor Gönder** düğmesine basın.
-
-## Test Modu (SMTP Olmadan Deneme)
-
-SMTP sunucusu tanımlı değilse uygulama otomatik olarak test modunda çalışır. Ayrıca **Ayarlar → Test modu** işaretlenerek de açılabilir veya `.env` içinde `MAIL_TEST_MODE=1` yapılabilir.
-
-Test modunda:
-
-- Gerçek e-posta gönderilmez.
-- Her e-posta `data/outbox/` altına HTML dosyası olarak yazılır.
-- **E-postalar** sayfasında tür, alıcı, konu ve durum kaydı tutulur; **Görüntüle** bağlantısıyla HTML içerik açılır.
-- Toplantı raporu, hatırlatma ve test e-postası akışlarının tamamı denenebilir.
-
-Bu sayede gerçek bir SMTP hesabı olmadan tüm akış doğrulanabilir.
-
-## Gmail ile E-posta Gönderimi
-
-Gmail normal hesap şifresiyle SMTP kullanmaz; **uygulama şifresi** gerekir.
-
-1. Google hesabınızda iki adımlı doğrulamayı açın.
-2. Google Hesabı → Güvenlik → **Uygulama şifreleri** bölümüne gidin.
-3. “Toplantı Takip” gibi bir ad vererek 16 karakterli uygulama şifresi oluşturun.
-4. Uygulamada **Ayarlar** sayfasında:
-   - SMTP sunucu: `smtp.gmail.com`
-   - Port: `587`
-   - SSL/TLS: işaretsiz
-   - Kullanıcı adı: Gmail adresiniz
-   - Şifre: oluşturduğunuz uygulama şifresi
-   - Gönderen e-posta: Gmail adresiniz
-5. **Ayarları Kaydet** → **SMTP Bağlantısını Test Et** → **Test E-postası Gönder**.
-
-Aynı değerler `.env` dosyasıyla da verilebilir:
-
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=ornek@gmail.com
-SMTP_PASS=uygulama-sifresi
-SMTP_FROM_EMAIL=ornek@gmail.com
-SMTP_FROM_NAME=Toplantı Takip
-RAPOR_ALICI=raporlar@ornek.com
+```bash
+npm run demo -- --sifirla
 ```
 
-> Gmail uygulama şifresini asla depoya commit etmeyin. `data/` klasörü ve `.env` `.gitignore` içindedir.
+Demo komutu; örnek kullanıcıları, departman atamalarını, şablon kontrollü dokümanları, revizyonları, onay bekleyen kayıtları, okuma durumlarını ve toplantı/iş verilerini oluşturur. E-posta ayarları **test modunda** kaydedilir; gerçek e-posta gönderilmez.
 
-## Toplantı Sonu Raporu
+### Demo Giriş Bilgileri
 
-- Her toplantı ekranındaki **Toplantıyı Tamamla ve Rapor Gönder** düğmesi, toplantıyı tamamlar ve raporu gönderir.
-- Rapor; toplantı adı/tarihi, aktif/beklemede/tamamlanan iş sayıları ve her işin sorumlusu, hedef tarihi ve notunu içeren duyarlı bir HTML e-postasıdır.
-- Rapor alıcısı **Ayarlar → Toplantı sonu rapor alıcı e-postası** alanında tanımlanır.
-- Rapor gönderilemezse toplantı tamamlanmış sayılmaz; hata mesajı gösterilir. Alıcı tanımlı değilse Ayarlar sayfasına yönlendirilir.
-- Tamamlanmış bir toplantı için **Raporu Tekrar Gönder** kullanılabilir. Toplantı yanlışlıkla tamamlandıysa **Yeniden Aç** ile tekrar açılabilir.
+| Rol | E-posta | Şifre |
+| --- | --- | --- |
+| Sistem Yöneticisi | `admin@qdms.local` | `Admin123!` |
+| Kalite Yöneticisi | `kalite@ornek.com` | `Kalite123!` |
+| Doküman Hazırlayan | `hazirlayan@ornek.com` | `Hazirlayan123!` |
+| Onaylayan | `onaylayan@ornek.com` | `Onaylayan123!` |
+| Standart Kullanıcı (Üretim) | `saha@ornek.com` | `Standart123!` |
+| Standart Kullanıcı (Bakım) | `bakim@ornek.com` | `Standart123!` |
 
-## Otomatik Hatırlatma
+> Demo şifreleri yalnızca yerel deneme içindir.
 
-- `node-cron`, her gün **Ayarlar → Günlük hatırlatma saati** değerinde (varsayılan `09:00`, varsayılan saat dilimi `Europe/Istanbul`) çalışır.
-- Aşağıdaki koşulları sağlayan işler taranır:
-  - durum `Aktif`,
-  - hedef tarihi bugün, yarın veya geçmişte,
-  - `hatirlatma_gonderildi = 0`,
-  - sorumlunun geçerli bir e-posta adresi var.
-- Her iş için ilgili sorumluya ayrı bir hatırlatma e-postası gider.
-- Başarılı gönderimden sonra `hatirlatma_gonderildi = 1` yapılır; aynı iş için tekrar gönderilmez.
-- Hedef tarih sonradan değiştirilirse hatırlatma durumu sıfırlanır; yeni tarih için yeniden hatırlatma yapılabilir.
-- E-posta gönderilemezse bayrak işaretlenmez; bir sonraki çalışmada tekrar denenir.
-- **Ayarlar → Hatırlatmaları Şimdi Çalıştır** ile zamanlanmış görevi beklemeden test edebilirsiniz.
+## Testler
 
-> Zamanlayıcı yalnızca uygulama sunucusu çalışırken aktiftir. Bilgisayar kapalıyken hatırlatma gönderilmez. Sürekli hatırlatma için uygulamayı açık tutun (gerekirse bir servis/başlangıç görevi ile).
+```bash
+npm test
+```
 
-## Ayarların Önceliği
+Testler şunları kapsar:
 
-1. **Arayüzden kaydedilen değer** (SQLite `ayarlar` tablosu)
-2. **`.env` dosyasındaki değer**
-3. **Varsayılan değer**
+- Giriş, oturum, varsayılan yönetici, rol bazlı yetkilendirme ve şifre değişimi
+- Departman/kullanıcı oluşturma, yönetim ekranlarının yetki koruması
+- Doküman oluşturma, otomatik kodlama ve zorunlu alan doğrulaması
+- Taslak/onaylı PDF üretimi, Türkçe karakterler ve taslak-yayın farkı
+- Onaya gönderme, onaylama, iade ve arşivleme
+- Yeni revizyon oluşturma, eski revizyonun arşivlenmesi ve değişiklik notu
+- Dağıtım, “Okudum, Anladım”, yüzdelik takip ve erişim sınırları
+- Şablon ve logo kaydetme, PDF önizleme, şirket kimliği
+- Hazır PDF yükleme/indirme
+- Mevcut toplantı, iş, rapor, hatırlatma, SMTP, ayar ve zamanlayıcı testleri
 
-Arayüzde bir alanı boş bırakıp kaydederseniz o ayarın veritabanı kaydı silinir; varsa `.env` değeri geçerli olur. SMTP şifresi boş bırakıldığında mevcut şifre korunur; silmek için **Kayıtlı SMTP şifresini sil** işaretlenir.
+## Proje Yapısı
+
+```text
+.
+├── server.js                 # Uygulama giriş noktası (varsayılan port 3005)
+├── src/
+│   ├── app.js                # Express rotaları: QDMS + toplantı modülü
+│   ├── auth.js               # Şifre (scrypt), oturum, roller ve yetkiler
+│   ├── qdms.js               # Doküman türleri, durumlar, şablon/kod yardımcıları
+│   ├── varsayilanlar.js      # İlk kurulum seed: departman, tür, şablon, admin
+│   ├── pdf.js                # PDFKit ile antetli/filigranlı PDF üretimi
+│   ├── db.js                 # SQLite şeması ve bağlantı
+│   ├── config.js             # .env ve yapılandırma
+│   ├── dates.js              # Tarih/saat/saat dilimi yardımcıları
+│   ├── dogrulama.js          # Form ve e-posta doğrulama
+│   ├── emails.js             # HTML e-posta şablonları
+│   ├── mailer.js             # Nodemailer + test modu outbox
+│   ├── reminder.js           # Hatırlatma işi ve cron zamanlayıcı
+│   ├── settings.js           # Ayar okuma/yazma, şirket kimliği
+│   └── sabitler.js           # Toplantı durumları ve etiketler
+├── views/                    # EJS sayfaları ve partial'lar
+├── public/                   # CSS, JS, favicon
+├── scripts/demo-verisi.js    # Örnek QDMS + toplantı verisi
+├── test/                     # node:test testleri
+├── docs/screenshots/         # Ekran görüntüleri
+├── data/                     # SQLite, outbox ve yüklemeler (gitignore)
+└── .github/workflows/test.yml
+```
+
+## Veritabanı Şeması (Özet)
+
+- `kullanicilar`: `id`, `ad`, `email`, `sifre_hash` (scrypt), `rol`, `departman_id`, `aktif`
+- `departmanlar`: `id`, `ad`, `aciklama`
+- `oturumlar`: `token`, `kullanici_id`, `son_gecerlilik`
+- `dokuman_turleri`: `kod` (`PR`, `TL`, `EK`, `LS`, `FR`), `ad`, `sira`
+- `sablonlar`: `tur_kod`, `baslik`, `bolumler` (JSON), `antet_renk`, `kenarlik_stili`, `logo_yolu`, `altbilgi_hazirlayan`, `altbilgi_onaylayan`
+- `dokumanlar`: `kod`, `tur_kod`, `baslik`, `revizyon`, `durum`, `icerik` (JSON bölümler), `degisiklik_notu`, `hazirlayan_id`, `onaylayan_id`, `onay_tarihi`, `yayin_tarihi`, `dosya_yolu`
+- `dokuman_hedef_departmanlar`: doküman ↔ departman dağıtım hedefi
+- `dokuman_okumalari`: `dokuman_id`, `kullanici_id`, `okundu`, `okunma_tarihi`
+- `dokuman_onaylari`: doküman üzerindeki işlem geçmişi (`olustur`, `onaya_gonder`, `onayla`, `reddet`, `arsivle`, `revizyon`)
+- `bildirimler`: kullanıcıya özel onay/doküman bildirimleri
+- `sorumlular`, `toplantilar`, `isler`, `ayarlar`, `email_kayitlari`: mevcut toplantı modülü tabloları
+
+Doküman kodları `(kod, revizyon)` çiftinde benzersizdir; aynı kodun farklı revizyonları geçmiş olarak saklanır. Yabancı anahtarlar açıktır (`PRAGMA foreign_keys = ON`).
 
 ## Ortam Değişkenleri
 
 | Değişken | Varsayılan | Açıklama |
 | --- | --- | --- |
-| `PORT` | `3000` | HTTP portu |
+| `PORT` | `3005` | HTTP portu |
 | `HOST` | `127.0.0.1` | Dinlenecek adres (yalnızca yerel kullanım için değiştirmeyin) |
 | `DATA_DIR` | `./data` | Veri klasörü |
 | `DB_YOLU` | `./data/toplanti.db` | SQLite veritabanı yolu |
@@ -186,109 +301,47 @@ Arayüzde bir alanı boş bırakıp kaydederseniz o ayarın veritabanı kaydı s
 | `SMTP_USER` | boş | SMTP kullanıcısı |
 | `SMTP_PASS` | boş | SMTP şifresi / uygulama şifresi |
 | `SMTP_FROM_EMAIL` | boş | Gönderen adresi |
-| `SMTP_FROM_NAME` | `Toplantı Takip` | Gönderen adı |
+| `SMTP_FROM_NAME` | `Kurumsal Kalite Yönetim Sistemi` | Gönderen adı |
 | `RAPOR_ALICI` | boş | Toplantı sonu rapor alıcısı |
 | `HATIRLATMA_SAATI` | `09:00` | Günlük hatırlatma saati (SS:DD) |
 | `SAAT_DILIMI` | `Europe/Istanbul` | Zamanlayıcı ve tarih hesapları için IANA saat dilimi |
-| `MAIL_TEST_MODE` | boş | `1` ise e-postalar gönderilmez, outbox'a yazılır |
+| `MAIL_TEST_MODE` | boş | `1` ise e-postalar gönderilmez, outbox’a yazılır |
 | `DISABLE_CRON` | boş | `1` ise otomatik hatırlatma zamanlayıcısı kapatılır |
+| `PDF_FONT_YOLU` | boş | PDF için isteğe bağlı normal TTF yolu |
+| `PDF_FONT_KALIN_YOLU` | boş | PDF için isteğe bağlı kalın TTF yolu |
 
-## Demo Verisi
+Arayüzden kaydedilen değerler `.env` değerlerini geçersiz kılar. SMTP şifresi boş bırakılırsa mevcut şifre korunur.
 
-Ekran görüntülerindeki gibi örnek verilerle hızlıca denemek için:
+## Güvenlik Notları
 
-```bash
-npm run demo
-npm start
-```
+- İlk kurulum yönetici şifresi `README.md`’de açıkça yer alır; **ilk girişte değiştirilmelidir**.
+- Parolalar `scrypt` ile tuzlanmış olarak saklanır. Oturumlar `HttpOnly`, `SameSite=Lax` çerezle ve sunucu tarafındaki rastgele token ile yönetilir; süre 7 gündür.
+- Uygulama varsayılan olarak yalnızca `127.0.0.1` üzerinde dinler. İnternete açık bir sunucuya taşınacaksa HTTPS, ters vekil (reverse proxy), güvenlik duvarı ve istek sınırlandırma eklenmelidir.
+- Yüklenen logolar PNG/JPG/WEBP ile, belgeler PDF/XLS/XLSX ile ve 10 MB sınırıyla kısıtlanır; dosyalar yalnızca oturum açmış kullanıcılara sunulur.
+- Formlarda CSRF token’ı ve giriş denemesi sınırlandırması yoktur; yerel/kurum içi kullanım için tasarlanmıştır.
+- SMTP şifresi SQLite’ta düz metin olarak saklanır. `data/` klasörünü ve `.env` dosyasını koruyun; depoya eklemeyin.
 
-Mevcut verileri silip örnekleri yeniden oluşturmak için:
+## Sınırlamalar
 
-```bash
-npm run demo -- --sifirla
-```
-
-Demo komutu, rapor alıcısı ve SMTP alanları boşsa örnek ayarları **test modu açık** şekilde kaydeder; gerçek e-posta göndermez. Yeni bir veritabanıyla çalışmak için `DB_YOLU` ortam değişkenini kullanabilirsiniz.
-
-## Testler
-
-```bash
-npm test
-```
-
-Testler şunları kapsar:
-
-- Tarih/saat doğrulama, saat dilimi ve gün hesapları
-- Sorumlu, toplantı ve iş CRUD akışları
-- Durum geçişleri (Aktif → Beklemede → Aktif, Tamamlandı, Yeniden Aç)
-- Toplantı raporunun test modunda outbox'a yazılması ve e-posta günlüğü
-- Rapor alıcısı yoksa toplantının tamamlanmaması
-- Sahte SMTP sunucusu ile gerçek Nodemailer gönderimi
-- Hatırlatma seçim kuralları, mükerrer gönderim koruması ve hata durumunda bayrağın işaretlenmemesi
-- Test modu ve gerçek SMTP modu ayrımı
-- Ayarların doğrulanması, şifre koruma ve `.env` yedeği
-- Zamanlayıcının ayarlara göre planlanması/yeniden planlanması
-- HTML kaçışları (XSS koruması) ve 404 davranışları
-
-## Proje Yapısı
-
-```text
-.
-├── server.js                 # Uygulama giriş noktası
-├── src/
-│   ├── app.js                # Express rotaları ve sayfa akışları
-│   ├── config.js             # .env ve yapılandırma
-│   ├── db.js                 # SQLite şeması ve bağlantı
-│   ├── dates.js              # Tarih/saat/saat dilimi yardımcıları
-│   ├── dogrulama.js          # Form ve e-posta doğrulama
-│   ├── emails.js             # HTML e-posta şablonları
-│   ├── mailer.js             # Nodemailer + test modu outbox
-│   ├── reminder.js           # Hatırlatma işi ve cron zamanlayıcı
-│   ├── settings.js           # Ayar okuma/yazma ve öncelik
-│   └── sabitler.js           # Durum ve etiket sabitleri
-├── views/                    # EJS sayfaları ve partial'lar
-├── public/                   # CSS, JS, favicon
-├── scripts/demo-verisi.js    # Örnek veri
-├── test/                     # node:test testleri
-├── docs/screenshots/         # Ekran görüntüleri
-├── data/                     # SQLite ve outbox (gitignore)
-└── .github/workflows/test.yml
-```
-
-## Veritabanı Şeması (Özet)
-
-- `sorumlular`: `id`, `ad`, `email` (benzersiz), `olusturma_tarihi`
-- `toplantilar`: `id`, `ad`, `tarih`, `durum` (`acik`/`tamamlandi`), `tamamlanma_tarihi`
-- `isler`: `id`, `toplanti_id`, `baslik`, `not_metni`, `sorumlu_id`, `hedef_tarih`, `durum` (`aktif`/`beklemede`/`tamamlandi`), `hatirlatma_gonderildi`, `hatirlatma_tarihi`, `tamamlanma_tarihi`
-- `ayarlar`: `anahtar`, `deger`
-- `email_kayitlari`: tür, alıcı, konu, durum, hata, HTML içerik, outbox dosyası
-
-Yabancı anahtarlar açıktır; toplantı silindiğinde bağlı işler de silinir (`ON DELETE CASCADE`), sorumlu silinmek istendiğinde atanmış işler varsa işlem engellenir.
+- Uygulama tek sunucu/tek veritabanı için tasarlanmıştır; çok kiracılı (multi-tenant) değildir.
+- Yüklenen hazır PDF’lerin üzerine **TASLAK** filigranı eklenmez; filigran yalnızca sistem tarafından üretilen PDF’lerde uygulanır. Excel dosyaları tarayıcıda önizlenemez.
+- PDF üretimi işletim sistemindeki Unicode yazı tipine bağlıdır. Hiçbir TTF bulunamazsa Türkçe karakterler ASCII karşılıklarıyla yazılır (`PDF_FONT_YOLU` ile giderilebilir).
+- Eğitim Yönetimi modülü henüz yer tutucudur.
+- E-posta teslimi SMTP sağlayıcısına bağlıdır; hatırlatma zamanlayıcısı yalnızca uygulama açıkken çalışır.
+- E-posta ekleri ve takvim (iCal) entegrasyonu yoktur.
 
 ## Sorun Giderme
 
 | Sorun | Çözüm |
 | --- | --- |
 | `Cannot find module 'node:sqlite'` | Node.js sürümünüzü 24+ yapın. |
-| `EADDRINUSE` | Port kullanımda; `.env` içinde `PORT=3001` gibi başka bir port seçin. |
-| SMTP bağlantısı kurulamıyor | Sunucu/port değerlerini, Gmail için uygulama şifresini ve 2FA'yı kontrol edin. |
+| `EADDRINUSE` | Port kullanımda; `.env` içinde `PORT=3006` gibi başka bir port seçin. |
+| Giriş yapılamıyor | Varsayılan yönetici bilgileriyle (`admin@qdms.local` / `Admin123!`) deneyin; şifre değiştirildiyse yöneticinizden sıfırlamasını isteyin. |
+| PDF’de Türkçe karakter bozuk | `PDF_FONT_YOLU` ile Unicode bir TTF dosyası gösterin (örn. Segoe UI veya DejaVu Sans). |
+| Logo görünmüyor | PNG/JPG/WEBP formatında ve 10 MB altında olduğundan emin olun; şablona özel logo yoksa şirket logosu kullanılır. |
+| SMTP bağlantısı kurulamıyor | Sunucu/port değerlerini, Gmail için uygulama şifresini ve 2FA’yı kontrol edin. |
 | Hatırlatma gelmiyor | Uygulamanın açık olduğundan, `DISABLE_CRON` ayarının boş olduğundan ve iş durumunun `Aktif` olduğundan emin olun. |
-| E-posta günlüğünde “Test modu” görünüyor | SMTP tanımlı değil veya test modu açık. Gerçek gönderim için Ayarlar'da test modunu kapatın ve SMTP bilgilerini girin. |
 | Tarih alanı `mm/dd/yyyy` gösteriyor | Tarayıcı yerel ayarıdır; uygulama tarihleri `gg.aa.yyyy` olarak gösterir. |
-
-## Güvenlik Notları
-
-- Uygulama varsayılan olarak yalnızca `127.0.0.1` üzerinde dinler ve kullanıcı girişi içermez. İnternete açık bir sunucuda kullanmayın.
-- SMTP şifresi yerel SQLite veritabanında düz metin olarak saklanır. `data/` klasörünü ve `.env` dosyasını koruyun; bunları paylaşmayın veya depoya eklemeyin.
-- Toplantı notları ve e-posta içerikleri kullanıcı girdisidir; HTML çıktılarında kaçış uygulanır, ancak uygulamayı güvenilmeyen kişilerle paylaşmayın.
-- Rapor e-postalarına yalnızca şirket içi/güvenilir alıcıları ekleyin.
-
-## Sınırlamalar
-
-- Tek kullanıcılı yerel uygulamadır; kullanıcı hesapları, roller ve yetkilendirme yoktur.
-- E-posta gönderimi SMTP sağlayıcınıza bağlıdır; test modu gerçek teslimi garanti etmez.
-- Zamanlayıcı, sunucu çalışırken aktiftir; kapalı bilgisayarda arka planda çalışmaz.
-- E-posta ekleri ve takvim (iCal) entegrasyonu yoktur; rapor ve hatırlatmalar HTML gövde olarak gönderilir.
 
 ## Lisans
 

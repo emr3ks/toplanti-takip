@@ -1,0 +1,126 @@
+<form class="belge-form" method="post" action="<%= islem %>" enctype="multipart/form-data">
+  <div class="belge-form-ana">
+    <section class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Doküman Bilgileri</h2>
+          <p>Başlık ve kısa açıklama, doküman listesinde ve PDF başlığında görünür.</p>
+        </div>
+        <span class="rozet rozet-tur" style="--tur-renk: <%= tur.renk %>"><%= tur.ad %></span>
+      </div>
+      <div class="form-grid">
+        <div class="alan tam">
+          <label for="belge-baslik">Doküman başlığı <span class="zorunlu-yazi">*</span></label>
+          <input class="girdi" type="text" id="belge-baslik" name="baslik" value="<%= form.baslik || '' %>" placeholder="Örn. Kalite Kayıtlarının Kontrolü Prosedürü" maxlength="200" required>
+        </div>
+        <div class="alan tam">
+          <label for="belge-aciklama">Açıklama</label>
+          <textarea id="belge-aciklama" name="aciklama" maxlength="1000" rows="2" placeholder="Dokümanın amacını tek cümleyle özetleyin."><%= form.aciklama || '' %></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Doküman İçeriği</h2>
+          <p><strong><%= sablon.baslik %></strong> şablonundaki bölümler aşağıda listelenmiştir. Metinleri bu alanlara yazın; PDF otomatik üretilir.</p>
+        </div>
+        <% if (yetkiliMi('sablon')) { %>
+          <a class="btn btn-kucuk btn-hayalet" href="/sablonlar/<%= tur.kod %>">Şablonu Düzenle</a>
+        <% } %>
+      </div>
+      <div class="bolum-formlari">
+        <% bolumler.forEach(function (bolum, indeks) { %>
+          <div class="alan bolum-alani">
+            <label for="bolum-<%= indeks %>">
+              <span><%= bolum.baslik %></span>
+              <% if (bolum.zorunlu) { %><span class="zorunlu-yazi">*</span><% } %>
+            </label>
+            <% if (bolum.ipucu) { %><span class="ipucu"><%= bolum.ipucu %></span><% } %>
+            <textarea id="bolum-<%= indeks %>" name="bolum_<%= indeks %>" rows="<%= bolum.zorunlu ? 5 : 3 %>" maxlength="20000" placeholder="<%= bolum.ipucu || 'Bu bölümün içeriğini yazın.' %>"><%= bolum.metin || '' %></textarea>
+          </div>
+        <% }) %>
+      </div>
+      <% if (!bolumler.length) { %>
+        <div class="bilgi-kutu">Bu şablon için bölüm tanımlanmamış. Dosya yükleyerek devam edebilir veya şablonu düzenleyebilirsiniz.</div>
+      <% } %>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Dağıtım ve Hedef Departmanlar</h2>
+          <p>Doküman yayınlandığında seçilen departmanların aktif kullanıcılarına bildirim düşer ve “Okudum, Anladım” takibi başlar.</p>
+        </div>
+        <span class="rozet rozet-acik"><%= seciliDepartmanlar.length %> departman seçili</span>
+      </div>
+      <% if (departmanlar.length) { %>
+        <div class="departman-secim">
+          <% departmanlar.forEach(function (departman) { %>
+            <label class="departman-secim-kutu">
+              <input type="checkbox" name="hedef_departmanlar" value="<%= departman.id %>" <%= seciliDepartmanlar.includes(departman.id) ? 'checked' : '' %>>
+              <span class="departman-secim-bilgi">
+                <strong><%= departman.ad %></strong>
+                <small><%= departman.kullanici_sayisi %> aktif kullanıcı<%= departman.aciklama ? ' · ' + kisaMetin(departman.aciklama, 50) : '' %></small>
+              </span>
+            </label>
+          <% }) %>
+        </div>
+        <p class="ipucu" style="margin:8px 0 0;">En az bir departman seçilmelidir.</p>
+      <% } else { %>
+        <div class="bilgi-kutu">Henüz departman tanımlanmamış. <a href="/organizasyon">Organizasyon</a> sayfasından departman ekleyin.</div>
+      <% } %>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Hazır Dosya (İsteğe Bağlı)</h2>
+          <p>Sistem tarafından PDF üretmek yerine bilgisayarınızdan hazır bir PDF veya Excel dosyası yükleyebilirsiniz.</p>
+        </div>
+      </div>
+      <% if (dosyaVar) { %>
+        <div class="dosya-kutu">
+          <div>
+            <strong><%= dosyaAdi || 'Yüklü dosya' %></strong>
+            <span class="metin-kucuk metin-soluk">Bu dokümanda yüklenmiş bir dosya var.</span>
+          </div>
+          <label class="onay-alani">
+            <input type="checkbox" name="dosya_sil" value="1">
+            <span>Yüklü dosyayı kaldır (sistem PDF’i kullanılsın)</span>
+          </label>
+        </div>
+      <% } %>
+      <div class="alan">
+        <label for="belge-dosya">Dosya yükle</label>
+        <input class="girdi dosya-girdi" type="file" id="belge-dosya" name="dosya" accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <span class="ipucu">PDF, XLS veya XLSX · en fazla 10 MB. Dosya yüklerseniz bölüm metinleri isteğe bağlı olur; taslak filigranı yalnızca sistem PDF’lerinde uygulanır.</span>
+      </div>
+    </section>
+
+    <div class="form-eylem belge-form-eylem">
+      <button class="btn btn-birincil" type="submit"><%= kaydetEtiketi %></button>
+      <a class="btn btn-hayalet" href="<%= donusLink %>">Vazgeç</a>
+      <span class="metin-kucuk metin-soluk">Doküman kodu sistem tarafından otomatik atanır.</span>
+    </div>
+  </div>
+
+  <aside class="belge-form-yan">
+    <div class="kart belge-ozet">
+      <div class="kart-bas"><div><h2>Doküman Özeti</h2><p>Kaydettiğinizde oluşacak temel bilgiler.</p></div></div>
+      <dl class="tanim-listesi">
+        <dt>Doküman kodu</dt><dd><span class="belge-kod"><%= kod %></span></dd>
+        <dt>Doküman türü</dt><dd><%= tur.ad %></dd>
+        <dt>Revizyon</dt><dd><span class="mono"><%= revizyonEtiketi(typeof dokuman !== 'undefined' && dokuman ? dokuman.revizyon : 0) %></span></dd>
+        <dt>Durum</dt><dd><span class="rozet rozet-dok-taslak">Taslak</span></dd>
+        <dt>Şablon</dt><dd><%= sablon.baslik %></dd>
+        <dt>Bölüm sayısı</dt><dd><%= bolumler.length %></dd>
+      </dl>
+      <div class="bilgi-kutu" style="margin-top:14px;">
+        <strong>Nasıl çalışır?</strong><br>
+        Kaydettiğinizde doküman <strong>Taslak</strong> olarak oluşturulur. PDF’de <strong>TASLAK</strong> filigranı görünür. “Onaya Gönder” ile onaylayanlara iletilir; onaylandığında filigran kalkar ve hedef departmanlara dağıtılır.
+      </div>
+    </div>
+  </aside>
+</form>
