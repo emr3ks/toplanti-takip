@@ -164,7 +164,7 @@ function hedefDurumu(is, bugun) {
   return `${fark} gün kaldı`;
 }
 
-function hatirlatmaHtml({ is, toplanti, sorumlu, bugun, raporTarihi }) {
+function hatirlatmaHtml({ is, toplanti, sorumlu, bugun }) {
   const durum = hedefDurumu(is, bugun);
   const not = is.not_metni
     ? `<div style="margin-top:12px;padding:12px 14px;background-color:#f8fafc;border-left:3px solid #6366f1;border-radius:0 8px 8px 0;font-size:13px;line-height:1.7;color:#475569;">${satirliEsc(is.not_metni)}</div>`

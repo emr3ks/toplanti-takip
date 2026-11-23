@@ -5,7 +5,7 @@ const cron = require('node-cron');
 const { bugunTz, gunEkle, gecerliSaat, tarihTr } = require('./dates');
 const { etkinAyarlar } = require('./settings');
 const { epostaGecerli } = require('./dogrulama');
-const { hatirlatmaHtml, hatirlatmaKonusu, gonderimZamani } = require('./emails');
+const { hatirlatmaHtml, hatirlatmaKonusu } = require('./emails');
 
 function cronIfadesi(saat) {
   if (!gecerliSaat(saat)) return null;
@@ -73,7 +73,6 @@ async function runReminderJob({ db, config, mailService, now = new Date(), kuruC
       toplanti: { ad: is.toplanti_ad, tarih: is.toplanti_tarih },
       sorumlu: { ad: is.sorumlu_ad, email: is.sorumlu_email },
       bugun,
-      raporTarihi: gonderimZamani(now, ayarlar.saatDilimi),
     });
 
     const gonderim = await mailService.gonder({
