@@ -66,10 +66,10 @@
     </span>
   </div>
   <div class="stat">
-    <span class="stat-ikon slate"><%- include('partials/ikon', { ad: 'isler' }) %></span>
+    <span class="stat-ikon slate"><%- include('partials/ikon', { ad: 'dokuman' }) %></span>
     <span class="stat-icerik">
-      <strong><%= sayilar.aktif %></strong>
-      <span>Aktif iş<%= geciken ? ` · ${geciken} geciken` : '' %></span>
+      <strong><%= dokumanSayilari.taslak %></strong>
+      <span>Taslak doküman</span>
     </span>
   </div>
 </section>
@@ -136,28 +136,6 @@
       <% } %>
     </div>
 
-    <div class="kart">
-      <div class="kart-bas">
-        <div>
-          <h2>Yaklaşan Hedefler</h2>
-          <p>Aktif işler; hedef tarihi yaklaşanlar ve gecikenler en üstte.</p>
-        </div>
-        <a class="btn btn-kucuk btn-hayalet" href="/isler?durum=aktif">Tümünü Gör</a>
-      </div>
-      <% if (yaklasan.length) { %>
-        <div class="is-listesi">
-          <% yaklasan.forEach(function (is) { %>
-            <%- include('partials/is-satiri', { is: is, donus: '/', toplantiGoster: true }) %>
-          <% }) %>
-        </div>
-      <% } else { %>
-        <div class="bos" style="padding:24px 12px;">
-          <h3>Yaklaşan hedef yok</h3>
-          <p>Bir toplantıya iş ekleyip hedef tarih belirlediğinizde burada görünecek.</p>
-          <a class="btn btn-ikincil" href="/toplantilar">Toplantı Seç</a>
-        </div>
-      <% } %>
-    </div>
   </div>
 
   <div class="dikey">
@@ -232,33 +210,6 @@
         </div>
       <% } else { %>
         <p class="metin-kucuk metin-soluk" style="margin:0;">Henüz doküman yok.</p>
-      <% } %>
-    </div>
-
-    <div class="kart">
-      <div class="kart-bas">
-        <div>
-          <h2>Toplantı Modülü</h2>
-          <p>Toplantı ve aksiyon takibi QDMS içinde.</p>
-        </div>
-        <a class="btn btn-kucuk btn-hayalet" href="/toplantilar">Toplantılar</a>
-      </div>
-      <div class="mini-istatistik">
-        <div><strong><%= sayilar.acik_toplanti %></strong><span>Açık toplantı</span></div>
-        <div><strong><%= sayilar.aktif %></strong><span>Aktif iş</span></div>
-        <div><strong><%= sayilar.beklemede %></strong><span>Beklemede</span></div>
-      </div>
-      <% if (sonToplantilar.length) { %>
-        <% sonToplantilar.slice(0, 2).forEach(function (toplanti) { %>
-          <a class="sorumlu-satir" href="/toplantilar/<%= toplanti.id %>" style="text-decoration:none;color:inherit;">
-            <span class="avatar"><%= basHarfler(toplanti.ad) %></span>
-            <span class="sorumlu-bilgi">
-              <strong><%= toplanti.ad %></strong>
-              <span><%= tarihTr(toplanti.tarih) %> · <%= toplanti.is_sayisi %> iş</span>
-            </span>
-            <span class="rozet rozet-<%= toplanti.durum %>"><%= TOPLANTI_DURUMLARI[toplanti.durum] %></span>
-          </a>
-        <% }) %>
       <% } %>
     </div>
   </div>

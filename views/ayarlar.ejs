@@ -1,9 +1,9 @@
-﻿<%- include('partials/ust', { aktifSayfa: 'ayarlar' }) %>
+<%- include('partials/ust', { aktifSayfa: 'ayarlar' }) %>
 
 <div class="sayfa-bas">
   <div>
     <h1>Sistem Ayarları</h1>
-    <p>Şirket adı ve logosu, SMTP e-posta bilgileri, toplantı raporu alıcısı ve günlük hatırlatma zamanı.</p>
+    <p>Şirket adı ve logosu, SMTP e-posta bilgileri, saat dilimi ve test modu.</p>
   </div>
   <div class="sayfa-eylem">
     <a class="btn btn-hayalet" href="/emailler">E-posta Günlüğü</a>
@@ -51,7 +51,7 @@
   <form class="kart" method="post" action="/ayarlar">
     <div class="kart-bas">
       <div>
-        <h2>E-posta ve Rapor Ayarları</h2>
+        <h2>E-posta Ayarları</h2>
         <p>Değerler veritabanına kaydedilir; boş alanlar .env dosyasındaki değere düşer.</p>
       </div>
       <span class="rozet <%= form.mod === 'test' ? 'rozet-test' : 'rozet-gonderildi' %>">
@@ -115,19 +115,9 @@
     <div class="ayirici"></div>
 
     <div class="ayar-bolum">
-      <h2>Rapor ve Hatırlatma</h2>
-      <p>Toplantı sonu raporunun alıcısı ve günlük otomatik hatırlatma ayarları.</p>
+      <h2>Görünüm ve Test</h2>
+      <p>Tarih/saat gösterimi ve e-posta test davranışı.</p>
       <div class="form-grid">
-        <div class="alan tam">
-          <label for="rapor-alici">Toplantı sonu rapor alıcı e-postası</label>
-          <input class="girdi" type="email" id="rapor-alici" name="rapor_alici" value="<%= form.raporAlici %>" placeholder="raporlar@ornek.com">
-          <span class="ipucu">“Toplantıyı Tamamla ve Rapor Gönder” butonu bu adrese rapor yollar.</span>
-        </div>
-        <div class="alan">
-          <label for="hatirlatma-saati">Günlük hatırlatma saati</label>
-          <input class="girdi" type="text" id="hatirlatma-saati" name="hatirlatma_saati" value="<%= form.hatirlatmaSaati %>" placeholder="09:00" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" inputmode="numeric" title="SS:DD biçiminde girin (örn. 09:00)" required>
-          <span class="ipucu">SS:DD biçiminde; saat dilimine göre her gün bu saatte çalışır.</span>
-        </div>
         <div class="alan">
           <label for="saat-dilimi">Saat dilimi</label>
           <select id="saat-dilimi" name="saat_dilimi">
@@ -136,6 +126,7 @@
               <option value="<%= dilim %>" <%= dilim === form.saatDilimi ? 'selected' : '' %>><%= dilim %></option>
             <% }) %>
           </select>
+          <span class="ipucu">Arayüzdeki tarih ve saatler bu dilime göre gösterilir.</span>
         </div>
         <div class="alan tam">
           <label class="onay-alani">
@@ -171,12 +162,8 @@
           <% } %>
         </div>
         <div class="bilgi-kutu">
-          <strong>Rapor alıcısı:</strong> <%= form.raporAlici || 'Tanımlı değil' %><br>
-          <strong>Günlük hatırlatma:</strong> <%= form.hatirlatmaSaati %> (<%= form.saatDilimi %>)<br>
-          <strong>Cron ifadesi:</strong> <span class="mono"><%= cron || 'geçersiz' %></span>
-        </div>
-        <div class="bilgi-kutu">
-          Sunucu çalıştığı sürece zamanlayıcı aktiftir. Bilgisayar kapalıyken hatırlatma gönderilmez.
+          <strong>Saat dilimi:</strong> <%= form.saatDilimi %><br>
+          <strong>E-posta kaydı:</strong> <%= form.testModu ? 'Test modu (outbox)' : 'Veritabanı günlüğü' %>
         </div>
         <div class="bilgi-kutu">
           <strong>Sunucu portu:</strong> <span class="mono"><%= sunucuPortu %></span> · <span class="mono">PORT</span> ortam değişkeniyle değiştirilebilir.
@@ -207,23 +194,10 @@
       <form method="post" action="/ayarlar/test-eposta" class="dikey">
         <div class="alan">
           <label for="test-alici">Alıcı</label>
-          <input class="girdi" type="email" id="test-alici" name="test_alici" value="<%= form.raporAlici || form.smtpUser %>" placeholder="ornek@ornek.com" required>
+          <input class="girdi" type="email" id="test-alici" name="test_alici" value="<%= form.smtpUser %>" placeholder="ornek@ornek.com" required>
         </div>
         <button class="btn btn-birincil btn-blok" type="submit">Test E-postası Gönder</button>
       </form>
-    </div>
-
-    <div class="kart">
-      <div class="kart-bas">
-        <div>
-          <h2>Hatırlatmayı Elle Çalıştır</h2>
-          <p>Zamanlanmış görevi beklemeden kontrol edin.</p>
-        </div>
-      </div>
-      <form method="post" action="/ayarlar/hatirlatma-calistir" data-onay="Aktif ve hedef tarihi yaklaşan işler için hatırlatma e-postaları gönderilecek. Devam edilsin mi?">
-        <button class="btn btn-ikincil btn-blok" type="submit">Hatırlatmaları Şimdi Çalıştır</button>
-      </form>
-      <p class="metin-kucuk metin-soluk" style="margin:10px 0 0;">Aynı iş için daha önce hatırlatma gönderildiyse tekrar gönderilmez.</p>
     </div>
 
     <div class="kart">

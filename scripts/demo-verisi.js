@@ -36,16 +36,13 @@ if (sifirla) {
     DELETE FROM dokumanlar;
     DELETE FROM oturumlar;
     DELETE FROM email_kayitlari;
-    DELETE FROM isler;
-    DELETE FROM toplantilar;
-    DELETE FROM sorumlular;
     DELETE FROM kullanicilar;
   `);
-  console.log('Mevcut doküman, toplantı, kullanıcı ve e-posta kayıtları temizlendi.');
+  console.log('Mevcut doküman, kullanıcı ve e-posta kayıtları temizlendi.');
 }
 
 const ayarlar = etkinAyarlar(db, config);
-if (!ayarlar.raporAlici) {
+if (!ayarlar.smtp.host) {
   ayarlariKaydet(
     db,
     {
@@ -56,8 +53,6 @@ if (!ayarlar.raporAlici) {
       smtp_pass: '',
       smtp_from_email: 'demo@ornek.com',
       smtp_from_name: 'Örnek Sanayi QDMS',
-      rapor_alici: 'raporlar@ornek.com',
-      hatirlatma_saati: '09:00',
       saat_dilimi: ayarlar.saatDilimi,
       test_modu: '1',
     },
@@ -359,133 +354,16 @@ const ek001 = dokumanEkle({
 });
 onayGecmisiEkle(ek001, hazirlayan, 'olustur', 'El kitabı taslağı oluşturuldu.', gunOnce(1));
 
-// ---------------------------------------------------------------------------
-// Toplantı ve aksiyon takibi demo verisi
-// ---------------------------------------------------------------------------
-function sorumluEkle(ad, email) {
-  const mevcutKisi = db.prepare('SELECT * FROM sorumlular WHERE email = ? COLLATE NOCASE').get(email);
-  if (mevcutKisi) return mevcutKisi.id;
-  const bilgi = db.prepare('INSERT INTO sorumlular (ad, email) VALUES (?, ?)').run(ad, email);
-  return Number(bilgi.lastInsertRowid);
-}
-
-function toplantiEkle(ad, tarih, durum = 'acik') {
-  const bilgi = db
-    .prepare(
-      `INSERT INTO toplantilar (ad, tarih, durum, tamamlanma_tarihi)
-       VALUES (?, ?, ?, ?)`
-    )
-    .run(ad, tarih, durum, durum === 'tamamlandi' ? simdi : null);
-  return Number(bilgi.lastInsertRowid);
-}
-
-function isEkle({
-  toplantiId,
-  baslik,
-  sorumluId,
-  hedefTarih,
-  durum = 'aktif',
-  notMetni = '',
-  hatirlatmaGonderildi = 0,
-  hatirlatmaTarihi = null,
-  tamamlanmaTarihi = null,
-}) {
-  db.prepare(
-    `INSERT INTO isler
-      (toplanti_id, baslik, not_metni, sorumlu_id, hedef_tarih, durum,
-       hatirlatma_gonderildi, hatirlatma_tarihi, olusturma_tarihi, guncelleme_tarihi, tamamlanma_tarihi)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    toplantiId,
-    baslik,
-    notMetni,
-    sorumluId,
-    hedefTarih,
-    durum,
-    hatirlatmaGonderildi,
-    hatirlatmaTarihi,
-    simdi,
-    simdi,
-    tamamlanmaTarihi
-  );
-}
-
-const elif = sorumluEkle('Elif Kaya', 'elif.kaya@ornek.com');
-const mert = sorumluEkle('Mert Demir', 'mert.demir@ornek.com');
-const zeynep = sorumluEkle('Zeynep Şahin', 'zeynep.sahin@ornek.com');
-const burak = sorumluEkle('Burak Yılmaz', 'burak.yilmaz@ornek.com');
-
-const kaliteToplantisi = toplantiEkle('Kalite Yönetim Gözden Geçirme', gunEkle(bugun, -14));
-isEkle({
-  toplantiId: kaliteToplantisi,
-  baslik: 'Yıllık kalite hedeflerini güncelle',
-  sorumluId: elif,
-  hedefTarih: gunEkle(bugun, 6),
-  notMetni: 'Birim hedefleri yönetim gözden geçirme toplantısında sunulacak.',
-});
-isEkle({
-  toplantiId: kaliteToplantisi,
-  baslik: 'Tedarikçi değerlendirme listesini yayınla',
-  sorumluId: zeynep,
-  hedefTarih: gunEkle(bugun, -2),
-  durum: 'tamamlandi',
-  notMetni: 'LS-001 listesi güncellendi ve onaya sunuldu.',
-  tamamlanmaTarihi: gunOnce(2),
-});
-isEkle({
-  toplantiId: kaliteToplantisi,
-  baslik: 'Düzeltici faaliyet formunu revize et',
-  sorumluId: mert,
-  hedefTarih: gunEkle(bugun, 3),
-  durum: 'beklemede',
-  notMetni: 'Formun kök neden alanı genişletilecek; onay bekleniyor.',
-});
-
-const uretimToplantisi = toplantiEkle('Haftalık Üretim Planlama', gunEkle(bugun, -2));
-isEkle({
-  toplantiId: uretimToplantisi,
-  baslik: 'CNC talimatının okunmasını takip et',
-  sorumluId: burak,
-  hedefTarih: gunEkle(bugun, 2),
-  notMetni: 'Üretim ekibinin TL-001 dokümanını okuması ve onaylaması sağlanacak.',
-});
-isEkle({
-  toplantiId: uretimToplantisi,
-  baslik: 'Aylık bakım planını yayınla',
-  sorumluId: zeynep,
-  hedefTarih: gunEkle(bugun, 5),
-  notMetni: 'Bakım planı bakım panosuna ve QDMS’e yüklenecek.',
-});
-isEkle({
-  toplantiId: uretimToplantisi,
-  baslik: 'Son üç aylık uygunsuzlukları analiz et',
-  sorumluId: mert,
-  hedefTarih: gunEkle(bugun, 1),
-  notMetni: 'Tekrarlayan uygunsuzluklar için Pareto analizi hazırlanacak.',
-});
-
-const tasarim = toplantiEkle('Doküman Şablonu Değerlendirmesi', gunEkle(bugun, -5));
-isEkle({
-  toplantiId: tasarim,
-  baslik: 'Prosedür şablonunun antet rengini güncelle',
-  sorumluId: elif,
-  hedefTarih: gunEkle(bugun, 4),
-  notMetni: 'Kurumsal kimlik rehberine uygun yeni renk paleti uygulanacak.',
-});
-
 const sayilar = {
   kullanici: db.prepare('SELECT COUNT(*) AS sayi FROM kullanicilar').get().sayi,
   dokuman: db.prepare('SELECT COUNT(*) AS sayi FROM dokumanlar').get().sayi,
   yayinda: db.prepare("SELECT COUNT(*) AS sayi FROM dokumanlar WHERE durum = 'yayinda'").get().sayi,
-  toplanti: db.prepare('SELECT COUNT(*) AS sayi FROM toplantilar').get().sayi,
-  is: db.prepare('SELECT COUNT(*) AS sayi FROM isler').get().sayi,
 };
 
 console.log('');
 console.log('Örnek QDMS verileri oluşturuldu.');
 console.log(`  Kullanıcı : ${sayilar.kullanici}`);
 console.log(`  Doküman   : ${sayilar.dokuman} (${sayilar.yayinda} yayında)`);
-console.log(`  Toplantı  : ${sayilar.toplanti} · İş: ${sayilar.is}`);
 console.log(`  Bugün     : ${bugun}`);
 console.log(`  Veritabanı: ${config.dbPath}`);
 console.log('');

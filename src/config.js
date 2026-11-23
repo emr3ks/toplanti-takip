@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const path = require('node:path');
 
@@ -34,7 +34,6 @@ function loadConfig(env = process.env, kok = KOK) {
     outboxDir,
     port: sayi(env.PORT, 3005),
     host: env.HOST || '127.0.0.1',
-    cronKapali: mantiksal(env.DISABLE_CRON, false),
     env: {
       smtp: {
         host: (env.SMTP_HOST || '').trim(),
@@ -45,8 +44,6 @@ function loadConfig(env = process.env, kok = KOK) {
         fromEmail: (env.SMTP_FROM_EMAIL || '').trim(),
         fromName: (env.SMTP_FROM_NAME || 'Kurumsal Kalite Yönetim Sistemi').trim(),
       },
-      raporAlici: (env.RAPOR_ALICI || '').trim(),
-      hatirlatmaSaati: (env.HATIRLATMA_SAATI || '09:00').trim(),
       saatDilimi: (env.SAAT_DILIMI || 'Europe/Istanbul').trim(),
       testModu: mantiksal(env.MAIL_TEST_MODE, false),
     },

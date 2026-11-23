@@ -1,10 +1,10 @@
 # QDMS — Kurumsal Kalite Yönetim Sistemi
 
-Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bir **Kalite Yönetim Sistemi (QDMS)**. Kullanıcı ve rol yönetimi, departmanlar, doküman şablonları, otomatik antetli PDF üretimi, çok aşamalı onay, revizyon geçmişi ve **“Okudum, Anladım”** takibi Faz 1 & 2 kapsamında hazırdır. Mevcut **Toplantı ve Aksiyon Takibi** modülü aynı uygulama içinde korunmuştur.
+Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bir **Kalite Yönetim Sistemi (QDMS)**. Kullanıcı ve rol yönetimi, departmanlar, doküman şablonları, otomatik antetli PDF üretimi, çok aşamalı onay, revizyon geçmişi ve **“Okudum, Anladım”** takibi Faz 1 & 2 kapsamında hazırdır. Uygulama yalnızca Dashboard ve Doküman Yönetimi odaklı QDMS arayüzü sunar; eski **Toplantı ve Aksiyon Takibi** modülü kaldırılmıştır.
 
 ## Öne Çıkanlar
 
-- **Kurumsal sol menü:** Dashboard, Doküman Yönetimi (Prosedür `PR`, Talimat `TL`, El Kitabı `EK`, Liste `LS`, Form `FR`), Doküman Şablon Tasarımcısı, Eğitim Yönetimi (yer tutucu), Toplantı ve Aksiyon Takibi, Organizasyon ve Kullanıcılar, Sistem Ayarları.
+- **Kurumsal sol menü:** Dashboard, Doküman Yönetimi (Prosedür `PR`, Talimat `TL`, El Kitabı `EK`, Liste `LS`, Form `FR`), Doküman Şablon Tasarımcısı, Eğitim Yönetimi (yer tutucu), Organizasyon ve Kullanıcılar, Sistem Ayarları.
 - **Giriş ve rol bazlı yetkilendirme:** Sistem Yöneticisi, Kalite Yöneticisi, Doküman Hazırlayan, Onaylayan, Standart Kullanıcı. İlk kurulumda otomatik yönetici hesabı oluşturulur.
 - **Departman yönetimi:** Üretim, Kalite Güvence, İnsan Kaynakları, Bakım, Satın Alma hazır gelir; yeni birim eklenebilir, kullanıcılar departmanlara atanır.
 - **Şablon tasarımcısı:** Her doküman türü için bölüm başlıkları, açıklamalar, zorunluluk, antet rengi, kenarlık stili, logo ve hazırlayan/onaylayan alt bilgi etiketleri tanımlanır. PDF önizlemesi anında alınır.
@@ -12,14 +12,14 @@ Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bi
 - **Onay ve revizyon:** `Taslak` → `Kontrol / Onay Bekliyor` → `Yayında` → `İptal / Arşiv`. Taslak PDF’inde **TASLAK** filigranı vardır; onaylandığında filigran kalkar, onaylayan ve onay tarihi belgeye işlenir. Yeni revizyon eski revizyonu arşivler; değişiklik notları saklanır.
 - **Dağıtım ve okuma takibi:** Doküman yayınlandığında seçilen departman personeline bildirim düşer; personel “Okudum, Anladım” onayı verir. Kalite yöneticisi yüzdelik ve isim listesiyle takip eder.
 - **İsteğe bağlı hazır dosya:** Sistem PDF’i üretmek yerine PDF/Excel dosyası yüklenebilir.
-- **Toplantı modülü:** Mevcut toplantı, iş, sorumlu, rapor ve hatırlatma akışları QDMS içinde çalışmaya devam eder.
+- **Sade QDMS arayüzü:** Sol menü ve Dashboard yalnızca kalite/doküman süreçlerine odaklanır.
 - **Varsayılan port:** `3005` (`PORT` ortam değişkeniyle değiştirilebilir). Tüm tablolar SQLite’tadır.
 
 ## Ekran Görüntüleri
 
 | Dashboard | Doküman Yönetimi |
 | --- | --- |
-| ![Dashboard](docs/screenshots/after-qdms-dashboard.png) | ![Doküman Yönetimi](docs/screenshots/after-qdms-dokumanlar.png) |
+| ![Dashboard](docs/screenshots/after-meeting-module-removed-dashboard.png) | ![Doküman Yönetimi](docs/screenshots/after-qdms-dokumanlar.png) |
 
 | Doküman Detayı | Şablon Tasarımcısı |
 | --- | --- |
@@ -29,9 +29,9 @@ Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bi
 | --- | --- |
 | ![Taslak PDF](docs/screenshots/after-qdms-taslak-pdf.png) | ![Giriş](docs/screenshots/after-qdms-giris.png) |
 
-| Organizasyon ve Kullanıcılar | Toplantı Modülü |
+| Organizasyon ve Kullanıcılar | Yeni Doküman |
 | --- | --- |
-| ![Organizasyon](docs/screenshots/after-qdms-organizasyon.png) | ![Toplantılar](docs/screenshots/after-qdms-toplantilar.png) |
+| ![Organizasyon](docs/screenshots/after-qdms-organizasyon.png) | ![Yeni Doküman](docs/screenshots/after-new-document-form.png) |
 
 ## Teknolojiler
 
@@ -43,7 +43,6 @@ Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bi
 | PDF | PDFKit (Unicode TTF gömme, filigran, sayfa numarası) |
 | Dosya yükleme | Multer (logo, PDF/Excel) |
 | E-posta | Nodemailer |
-| Zamanlayıcı | node-cron |
 | Test | Node.js yerleşik `node:test`, HTTP üzerinden uçtan uca akışlar |
 
 ## Gereksinimler
@@ -107,8 +106,8 @@ Yetkisiz sayfalara erişim `403`, oturum yoksa giriş ekranına yönlendirme ile
 
 ### 1. Dashboard
 
-- Bekleyen onaylar (onaylama yetkisi olanlara), okunmamış dokümanlar, yayındaki doküman sayısı ve toplantı/iş özetleri.
-- Bildirimler, doküman tür dağılımı, son dokümanlar ve son toplantılar.
+- Bekleyen onaylar (onaylama yetkisi olanlara), okunmamış dokümanlar, yayındaki ve taslak doküman sayıları.
+- Bildirimler, doküman tür dağılımı ve son dokümanlar.
 - Bildirimler tek tıkla okundu işaretlenebilir.
 
 ### 2. Doküman Yönetimi
@@ -165,22 +164,18 @@ Yetkisiz sayfalara erişim `403`, oturum yoksa giriş ekranına yönlendirme ile
 
 Faz 1 kapsamında **yer tutucu** menüdür; eğitim kataloğu, atama ve yeterlilik takibi sonraki faza bırakılmıştır.
 
-### 8. Toplantı ve Aksiyon Takibi
-
-Önceki sürümdeki toplantı, iş, sorumlu, e-posta raporu ve otomatik hatırlatma akışları aynen kullanılabilir. Sol menüde “Toplantı ve Aksiyon Takibi” altında Toplantılar, İşler ve Sorumlular bulunur.
-
-### 9. Organizasyon ve Kullanıcılar
+### 8. Organizasyon ve Kullanıcılar
 
 - Sistem Yöneticisi yeni departman açar/düzenler/siler (kullanıcı atanmış departman silinemez).
 - Kullanıcı oluşturma, rol ve departman atama, hesabı aktif/pasif yapma, şifre belirleme.
 - Her kullanıcı kendi şifresini değiştirebilir. Sistemde en az bir aktif yönetici kalması korunur.
 
-### 10. Sistem Ayarları
+### 9. Sistem Ayarları
 
 - **Şirket Kimliği:** Şirket adı ve logosu; PDF antetlerinde kullanılır.
 - **SMTP:** Sunucu, port, SSL/TLS, kullanıcı, şifre, gönderen adı/e-postası. Gmail için uygulama şifresi gerekir.
-- **Rapor ve Hatırlatma:** Toplantı raporu alıcısı, günlük hatırlatma saati, saat dilimi, test modu.
-- **Test araçları:** SMTP bağlantı testi, test e-postası, hatırlatmayı elle çalıştırma.
+- **Görünüm ve Test:** Saat dilimi ve e-posta test modu.
+- **Test araçları:** SMTP bağlantı testi ve test e-postası.
 - Varsayılan sunucu portu `3005`’tir.
 
 ## PDF Tasarımı
@@ -207,7 +202,7 @@ Mevcut demo verilerini silip yeniden oluşturmak için:
 npm run demo -- --sifirla
 ```
 
-Demo komutu; örnek kullanıcıları, departman atamalarını, şablon kontrollü dokümanları, revizyonları, onay bekleyen kayıtları, okuma durumlarını ve toplantı/iş verilerini oluşturur. E-posta ayarları **test modunda** kaydedilir; gerçek e-posta gönderilmez.
+Demo komutu; örnek kullanıcıları, departman atamalarını, şablon kontrollü dokümanları, revizyonları, onay bekleyen kayıtları ve okuma durumlarını oluşturur. E-posta ayarları **test modunda** kaydedilir; gerçek e-posta gönderilmez.
 
 ### Demo Giriş Bilgileri
 
@@ -239,7 +234,8 @@ Testler şunları kapsar:
 - Dağıtım, “Okudum, Anladım”, yüzdelik takip ve erişim sınırları
 - Şablon ve logo kaydetme, PDF önizleme, şirket kimliği
 - Hazır PDF yükleme/indirme
-- Mevcut toplantı, iş, rapor, hatırlatma, SMTP, ayar ve zamanlayıcı testleri
+- SMTP bağlantısı, e-posta günlüğü ve ayar yönetimi
+- Kaldırılan toplantı/aksiyon sayfalarının artık 404 döndürmesi ve menüde görünmemesi
 
 ## Proje Yapısı
 
@@ -247,7 +243,7 @@ Testler şunları kapsar:
 .
 ├── server.js                 # Uygulama giriş noktası (varsayılan port 3005)
 ├── src/
-│   ├── app.js                # Express rotaları: QDMS + toplantı modülü
+│   ├── app.js                # Express rotaları: QDMS arayüzü
 │   ├── auth.js               # Şifre (scrypt), oturum, roller ve yetkiler
 │   ├── qdms.js               # Doküman türleri, durumlar, şablon/kod yardımcıları
 │   ├── varsayilanlar.js      # İlk kurulum seed: departman, tür, şablon, admin
@@ -258,12 +254,11 @@ Testler şunları kapsar:
 │   ├── dogrulama.js          # Form ve e-posta doğrulama
 │   ├── emails.js             # HTML e-posta şablonları
 │   ├── mailer.js             # Nodemailer + test modu outbox
-│   ├── reminder.js           # Hatırlatma işi ve cron zamanlayıcı
 │   ├── settings.js           # Ayar okuma/yazma, şirket kimliği
-│   └── sabitler.js           # Toplantı durumları ve etiketler
+│   └── sabitler.js           # E-posta durum ve tür etiketleri
 ├── views/                    # EJS sayfaları ve partial'lar
 ├── public/                   # CSS, JS, favicon
-├── scripts/demo-verisi.js    # Örnek QDMS + toplantı verisi
+├── scripts/demo-verisi.js    # Örnek QDMS verisi
 ├── test/                     # node:test testleri
 ├── docs/screenshots/         # Ekran görüntüleri
 ├── data/                     # SQLite, outbox ve yüklemeler (gitignore)
@@ -282,7 +277,7 @@ Testler şunları kapsar:
 - `dokuman_okumalari`: `dokuman_id`, `kullanici_id`, `okundu`, `okunma_tarihi`
 - `dokuman_onaylari`: doküman üzerindeki işlem geçmişi (`olustur`, `onaya_gonder`, `onayla`, `reddet`, `arsivle`, `revizyon`)
 - `bildirimler`: kullanıcıya özel onay/doküman bildirimleri
-- `sorumlular`, `toplantilar`, `isler`, `ayarlar`, `email_kayitlari`: mevcut toplantı modülü tabloları
+- `ayarlar`, `email_kayitlari`: sistem ayarları ve e-posta günlüğü
 
 Doküman kodları `(kod, revizyon)` çiftinde benzersizdir; aynı kodun farklı revizyonları geçmiş olarak saklanır. Yabancı anahtarlar açıktır (`PRAGMA foreign_keys = ON`).
 
@@ -302,11 +297,8 @@ Doküman kodları `(kod, revizyon)` çiftinde benzersizdir; aynı kodun farklı 
 | `SMTP_PASS` | boş | SMTP şifresi / uygulama şifresi |
 | `SMTP_FROM_EMAIL` | boş | Gönderen adresi |
 | `SMTP_FROM_NAME` | `Kurumsal Kalite Yönetim Sistemi` | Gönderen adı |
-| `RAPOR_ALICI` | boş | Toplantı sonu rapor alıcısı |
-| `HATIRLATMA_SAATI` | `09:00` | Günlük hatırlatma saati (SS:DD) |
-| `SAAT_DILIMI` | `Europe/Istanbul` | Zamanlayıcı ve tarih hesapları için IANA saat dilimi |
+| `SAAT_DILIMI` | `Europe/Istanbul` | Tarih/saat gösterimi için IANA saat dilimi |
 | `MAIL_TEST_MODE` | boş | `1` ise e-postalar gönderilmez, outbox’a yazılır |
-| `DISABLE_CRON` | boş | `1` ise otomatik hatırlatma zamanlayıcısı kapatılır |
 | `PDF_FONT_YOLU` | boş | PDF için isteğe bağlı normal TTF yolu |
 | `PDF_FONT_KALIN_YOLU` | boş | PDF için isteğe bağlı kalın TTF yolu |
 
@@ -327,7 +319,7 @@ Arayüzden kaydedilen değerler `.env` değerlerini geçersiz kılar. SMTP şifr
 - Yüklenen hazır PDF’lerin üzerine **TASLAK** filigranı eklenmez; filigran yalnızca sistem tarafından üretilen PDF’lerde uygulanır. Excel dosyaları tarayıcıda önizlenemez.
 - PDF üretimi işletim sistemindeki Unicode yazı tipine bağlıdır. Hiçbir TTF bulunamazsa Türkçe karakterler ASCII karşılıklarıyla yazılır (`PDF_FONT_YOLU` ile giderilebilir).
 - Eğitim Yönetimi modülü henüz yer tutucudur.
-- E-posta teslimi SMTP sağlayıcısına bağlıdır; hatırlatma zamanlayıcısı yalnızca uygulama açıkken çalışır.
+- E-posta teslimi SMTP sağlayıcısına bağlıdır.
 - E-posta ekleri ve takvim (iCal) entegrasyonu yoktur.
 
 ## Sorun Giderme
@@ -340,7 +332,6 @@ Arayüzden kaydedilen değerler `.env` değerlerini geçersiz kılar. SMTP şifr
 | PDF’de Türkçe karakter bozuk | `PDF_FONT_YOLU` ile Unicode bir TTF dosyası gösterin (örn. Segoe UI veya DejaVu Sans). |
 | Logo görünmüyor | PNG/JPG/WEBP formatında ve 10 MB altında olduğundan emin olun; şablona özel logo yoksa şirket logosu kullanılır. |
 | SMTP bağlantısı kurulamıyor | Sunucu/port değerlerini, Gmail için uygulama şifresini ve 2FA’yı kontrol edin. |
-| Hatırlatma gelmiyor | Uygulamanın açık olduğundan, `DISABLE_CRON` ayarının boş olduğundan ve iş durumunun `Aktif` olduğundan emin olun. |
 | Tarih alanı `mm/dd/yyyy` gösteriyor | Tarayıcı yerel ayarıdır; uygulama tarihleri `gg.aa.yyyy` olarak gösterir. |
 
 ## Lisans

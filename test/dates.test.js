@@ -12,7 +12,6 @@ const {
   tarihTr,
   zamanTr,
 } = require('../src/dates');
-const { cronIfadesi } = require('../src/reminder');
 
 test('geçerliTarih gerçek takvim tarihlerini doğrular', () => {
   assert.equal(gecerliTarih('2026-11-23'), true);
@@ -57,11 +56,4 @@ test('tarihTr ve zamanTr Türkçe biçimlendirir', () => {
   assert.equal(tarihTr('2026-11-23'), '23.11.2026');
   assert.equal(tarihTr(null), '—');
   assert.match(zamanTr('2026-11-23T12:00:00.000Z', 'Europe/Istanbul'), /23 Kas 2026/);
-});
-
-test('cronIfadesi günlük ifade üretir', () => {
-  assert.equal(cronIfadesi('09:00'), '0 9 * * *');
-  assert.equal(cronIfadesi('14:05'), '5 14 * * *');
-  assert.equal(cronIfadesi('23:59'), '59 23 * * *');
-  assert.equal(cronIfadesi('25:00'), null);
 });

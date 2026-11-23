@@ -13,14 +13,13 @@ const { VARSAYILAN_ADMIN } = require('../src/auth');
 const cerezler = new Map();
 
 function testOrtami(env = {}) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'toplanti-test-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qdms-test-'));
   const config = loadConfig({
     ...process.env,
     DATA_DIR: dir,
     DB_YOLU: path.join(dir, 'test.db'),
     OUTBOX_DIR: path.join(dir, 'outbox'),
     MAIL_TEST_MODE: '1',
-    DISABLE_CRON: '1',
     SMTP_HOST: '',
     SMTP_PORT: '587',
     SMTP_SECURE: '',
@@ -28,15 +27,13 @@ function testOrtami(env = {}) {
     SMTP_PASS: '',
     SMTP_FROM_EMAIL: '',
     SMTP_FROM_NAME: 'Kalite Yönetim Sistemi',
-    RAPOR_ALICI: '',
-    HATIRLATMA_SAATI: '09:00',
     SAAT_DILIMI: 'Europe/Istanbul',
     ...env,
   });
 
   const db = openDatabase(config.dbPath);
   const mailService = new MailService({ db, config });
-  const app = createApp({ db, config, mailService, zamanlayici: null });
+  const app = createApp({ db, config, mailService });
 
   return {
     dir,

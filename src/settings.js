@@ -1,7 +1,7 @@
-﻿'use strict';
+'use strict';
 
 const { mantiksal } = require('./config');
-const { gecerliSaat, gecerliSaatDilimi } = require('./dates');
+const { gecerliSaatDilimi } = require('./dates');
 const { metin, epostaGecerli } = require('./dogrulama');
 
 const SAAT_DILIMLERI = Object.freeze([
@@ -22,8 +22,6 @@ const ANAHTARLAR = Object.freeze([
   'smtp_pass',
   'smtp_from_email',
   'smtp_from_name',
-  'rapor_alici',
-  'hatirlatma_saati',
   'saat_dilimi',
   'test_modu',
 ]);
@@ -55,10 +53,6 @@ function ortamDegeri(config, anahtar) {
       return env.smtp.fromEmail;
     case 'smtp_from_name':
       return env.smtp.fromName;
-    case 'rapor_alici':
-      return env.raporAlici;
-    case 'hatirlatma_saati':
-      return env.hatirlatmaSaati;
     case 'saat_dilimi':
       return env.saatDilimi;
     case 'test_modu':
@@ -102,8 +96,6 @@ function etkinAyarlar(db, config) {
       fromEmail: sec('smtp_from_email', ''),
       fromName: sec('smtp_from_name', 'Kurumsal Kalite Yönetim Sistemi'),
     },
-    raporAlici: sec('rapor_alici', ''),
-    hatirlatmaSaati: sec('hatirlatma_saati', '09:00'),
     saatDilimi: sec('saat_dilimi', 'Europe/Istanbul'),
     testModu: mantiksal(sec('test_modu', '0'), false),
     kaynaklar: {
@@ -114,8 +106,6 @@ function etkinAyarlar(db, config) {
       smtpPass: kaynak(dbMap, config, 'smtp_pass'),
       smtpFromEmail: kaynak(dbMap, config, 'smtp_from_email'),
       smtpFromName: kaynak(dbMap, config, 'smtp_from_name'),
-      raporAlici: kaynak(dbMap, config, 'rapor_alici'),
-      hatirlatmaSaati: kaynak(dbMap, config, 'hatirlatma_saati'),
       saatDilimi: kaynak(dbMap, config, 'saat_dilimi'),
       testModu: kaynak(dbMap, config, 'test_modu'),
     },
@@ -134,8 +124,6 @@ function guvenliAyarlar(ayarlar) {
       fromName: ayarlar.smtp.fromName,
       sifreVar: Boolean(ayarlar.smtp.pass),
     },
-    raporAlici: ayarlar.raporAlici,
-    hatirlatmaSaati: ayarlar.hatirlatmaSaati,
     saatDilimi: ayarlar.saatDilimi,
     testModu: ayarlar.testModu,
   };
@@ -188,8 +176,6 @@ function ayarlarFormu(db, config) {
     smtpUser: a.smtp.user,
     smtpFromEmail: a.smtp.fromEmail,
     smtpFromName: a.smtp.fromName,
-    raporAlici: a.raporAlici,
-    hatirlatmaSaati: a.hatirlatmaSaati,
     saatDilimi: a.saatDilimi,
     testModu: a.testModu,
     smtpPassVar: Boolean(a.smtp.pass),
@@ -218,16 +204,11 @@ function ayarYaz(db, anahtar, deger) {
  */
 function ayarlariKaydet(db, girdi, config) {
   const al = (ad) => metin(girdi[ad]);
-  const raporAlici = al('rapor_alici');
   const smtpFromEmail = al('smtp_from_email');
   const smtpHost = al('smtp_host');
-  const hatirlatmaSaati = al('hatirlatma_saati');
   const saatDilimi = al('saat_dilimi');
   const portMetni = al('smtp_port');
 
-  if (raporAlici && !epostaGecerli(raporAlici)) {
-    throw new Error('Rapor alıcı e-posta adresi geçerli değil.');
-  }
   if (smtpFromEmail && !epostaGecerli(smtpFromEmail)) {
     throw new Error('Gönderen e-posta adresi geçerli değil.');
   }
@@ -238,9 +219,6 @@ function ayarlariKaydet(db, girdi, config) {
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
       throw new Error('SMTP portu 1 ile 65535 arasında bir tam sayı olmalıdır.');
     }
-  }
-  if (hatirlatmaSaati && !gecerliSaat(hatirlatmaSaati)) {
-    throw new Error('Hatırlatma saati SS:DD biçiminde olmalıdır (örn. 09:00).');
   }
   if (saatDilimi && !gecerliSaatDilimi(saatDilimi)) {
     throw new Error('Saat dilimi geçerli bir IANA saat dilimi olmalıdır (örn. Europe/Istanbul).');
@@ -258,8 +236,6 @@ function ayarlariKaydet(db, girdi, config) {
     ayarYaz(db, 'smtp_user', al('smtp_user'));
     ayarYaz(db, 'smtp_from_email', smtpFromEmail);
     ayarYaz(db, 'smtp_from_name', al('smtp_from_name'));
-    ayarYaz(db, 'rapor_alici', raporAlici);
-    ayarYaz(db, 'hatirlatma_saati', hatirlatmaSaati);
     ayarYaz(db, 'saat_dilimi', saatDilimi);
     ayarYaz(db, 'test_modu', girdi.test_modu ? '1' : '0');
 

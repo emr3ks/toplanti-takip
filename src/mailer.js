@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -45,24 +45,14 @@ class MailService {
     });
   }
 
-  kaydet({ tur, alici, konu, durum, hata = null, icerik = '', dosya = null, toplantiId = null, isId = null }) {
+  kaydet({ tur, alici, konu, durum, hata = null, icerik = '', dosya = null }) {
     const bilgi = this.db
       .prepare(
         `INSERT INTO email_kayitlari
-          (tur, alici, konu, durum, hata, icerik, dosya, toplanti_id, is_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (tur, alici, konu, durum, hata, icerik, dosya)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(
-        tur,
-        alici,
-        konu,
-        durum,
-        hata,
-        icerik,
-        dosya,
-        toplantiId === null ? null : Number(toplantiId),
-        isId === null ? null : Number(isId)
-      );
+      .run(tur, alici, konu, durum, hata, icerik, dosya);
     return Number(bilgi.lastInsertRowid);
   }
 
@@ -79,7 +69,7 @@ class MailService {
    * HTML e-postayı gönderir. Test modunda gönderim yapmaz, e-postayı
    * data/outbox altına yazar ve veritabanına kaydeder.
    */
-  async gonder({ tur, alici, konu, html, toplantiId = null, isId = null }) {
+  async gonder({ tur, alici, konu, html }) {
     const ayarlar = this.ayarlar();
     const mod = mailModu(ayarlar);
     const hedef = metin(alici);
@@ -93,8 +83,6 @@ class MailService {
         durum: 'hata',
         hata,
         icerik: html,
-        toplantiId,
-        isId,
       });
       return { ok: false, durum: 'hata', hata, mod, kayitId };
     }
@@ -112,8 +100,6 @@ class MailService {
           durum: 'hata',
           hata: mesaj,
           icerik: html,
-          toplantiId,
-          isId,
         });
         return { ok: false, durum: 'hata', hata: mesaj, mod, kayitId };
       }
@@ -125,8 +111,6 @@ class MailService {
         durum: 'test_modu',
         icerik: html,
         dosya,
-        toplantiId,
-        isId,
       });
       return { ok: true, durum: 'test_modu', dosya, mod, kayitId };
     }
@@ -141,8 +125,6 @@ class MailService {
         durum: 'hata',
         hata,
         icerik: html,
-        toplantiId,
-        isId,
       });
       return { ok: false, durum: 'hata', hata, mod, kayitId };
     }
@@ -160,8 +142,6 @@ class MailService {
         konu,
         durum: 'gonderildi',
         icerik: html,
-        toplantiId,
-        isId,
       });
       return {
         ok: true,
@@ -180,8 +160,6 @@ class MailService {
         durum: 'hata',
         hata: mesaj,
         icerik: html,
-        toplantiId,
-        isId,
       });
       return { ok: false, durum: 'hata', hata: mesaj, mod, kayitId };
     }
