@@ -1,0 +1,40 @@
+<%- include('partials/ust', { aktifSayfa: 'egitim' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Eğitim Yönetimi</h1>
+    <p>Kalite eğitimlerini planlayın, personelin eğitim kayıtlarını ve yeterliliklerini takip edin.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <span class="rozet rozet-test">Yakında</span>
+  </div>
+</div>
+
+<section class="kart egitim-yakinda">
+  <div class="egitim-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></div>
+  <h2>Eğitim modülü hazırlanıyor</h2>
+  <p>Bu modül QDMS yol haritasının sonraki fazında etkinleştirilecek. Planlanan yetenekler:</p>
+  <div class="egitim-plan">
+    <div class="egitim-plan-kart">
+      <strong>Eğitim Kataloğu</strong>
+      <span>Zorunlu ve isteğe bağlı eğitimleri tanımlayın, dokümanlarla ilişkilendirin.</span>
+    </div>
+    <div class="egitim-plan-kart">
+      <strong>Atama ve Takvim</strong>
+      <span>Departman bazında eğitim atayın, geçerlilik sürelerini izleyin.</span>
+    </div>
+    <div class="egitim-plan-kart">
+      <strong>Yeterlilik Takibi</strong>
+      <span>Katılım, sınav ve sertifika kayıtlarını personel bazında raporlayın.</span>
+    </div>
+  </div>
+  <div class="bilgi-kutu" style="max-width:620px;margin:18px auto 0;">
+    Bu sayfa şimdilik bir yer tutucudur. Doküman yönetimi, şablon tasarımı, onay akışı ve okuma takibi Faz 1 &amp; 2 kapsamında kullanıma açıktır.
+  </div>
+  <div class="egitim-eylem">
+    <a class="btn btn-birincil" href="/dokumanlar">Doküman Yönetimine Git</a>
+    <a class="btn btn-hayalet" href="/">Dashboard</a>
+  </div>
+</section>
+
+<%- include('partials/alt') %>

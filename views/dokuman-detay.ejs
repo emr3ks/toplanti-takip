@@ -1,0 +1,298 @@
+<%- include('partials/ust', { aktifSayfa: 'dokumanlar', aktifTur: dokuman.tur_kod }) %>
+
+<%
+  const durumSinif = dokumanDurumSinifi(dokuman.durum);
+  const islemEtiketleri = {
+    olustur: 'Oluşturuldu',
+    duzenle: 'Düzenlendi',
+    onaya_gonder: 'Onaya Gönderildi',
+    onayla: 'Onaylandı ve Yayınlandı',
+    reddet: 'İade Edildi',
+    arsivle: 'Arşivlendi',
+    revizyon: 'Revizyon Oluşturuldu',
+  };
+  const duzenlenebilirDurum = dokuman.durum === 'taslak';
+%>
+
+<div class="sayfa-bas belge-detay-bas">
+  <div>
+    <div class="belge-detay-ust">
+      <span class="belge-kod buyuk"><%= dokuman.kod %></span>
+      <span class="rozet rozet-dok-<%= durumSinif %>"><%= dokumanDurumEtiketi(dokuman.durum) %></span>
+      <span class="rozet rozet-tur" style="--tur-renk: <%= tur.renk %>"><%= tur.ad %></span>
+      <span class="mono metin-soluk"><%= revizyonEtiketi(dokuman.revizyon) %></span>
+    </div>
+    <h1><%= dokuman.baslik %></h1>
+    <p><%= dokuman.aciklama || tur.aciklama %></p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/dokumanlar?tur=<%= tur.kod %>">Listeye Dön</a>
+    <% if (duzenleyebilir) { %>
+      <a class="btn btn-hayalet" href="/dokumanlar/<%= dokuman.id %>/duzenle">Düzenle</a>
+    <% } %>
+    <a class="btn btn-birincil" href="/dokumanlar/<%= dokuman.id %>/pdf" target="_blank" rel="noopener">PDF’i Aç</a>
+  </div>
+</div>
+
+<div class="belge-durum-seridi durum-<%= durumSinif %>">
+  <span class="belge-durum-ikon"><%- include('partials/ikon', { ad: durumSinif === 'yayinda' ? 'onay' : durumSinif === 'kontrol' ? 'zil' : 'dokuman' }) %></span>
+  <div>
+    <strong><%= dokumanDurumEtiketi(dokuman.durum) %></strong>
+    <span><%= DOKUMAN_DURUM_ACIKLAMALARI[dokuman.durum] %></span>
+  </div>
+  <div class="belge-durum-veri">
+    <span><strong><%= hedefDepartmanlar.length %></strong> hedef departman</span>
+    <% if (dokuman.durum === 'yayinda') { %>
+      <span><strong><%= yuzde %>%</strong> okundu (<%= dokuman.okuyan_sayisi %>/<%= dokuman.okuyucu_sayisi %>)</span>
+    <% } %>
+  </div>
+</div>
+
+<% if (dokuman.durum === 'taslak') { %>
+  <div class="bilgi-kutu belge-ipucu">
+    <strong>Taslak aşaması:</strong> PDF üzerinde <span class="mono">TASLAK</span> filigranı görünür. İçerik tamamlandığında <strong>Onaya Gönder</strong> ile onaylayanlara iletebilirsiniz.
+  </div>
+<% } %>
+<% if (dokuman.durum === 'kontrol') { %>
+  <div class="bilgi-kutu belge-ipucu">
+    <strong>Onay bekliyor:</strong> Doküman onaylayanların incelemesinde. Onaylandığında filigran kalkar, onay tarihi ve onaylayan adı PDF antetine işlenir; hedef departmanlara dağıtım yapılır.
+  </div>
+<% } %>
+<% if (benimOkumam && dokuman.durum === 'yayinda') { %>
+  <% if (benimOkumam.okundu) { %>
+    <div class="bildirim bildirim-basari" role="status">
+      <span class="bildirim-ikon">✓</span>
+      <div><strong>Okudum, Anladım</strong> onayınız kaydedildi · <%= zamanTr(benimOkumam.okunma_tarihi) %></div>
+    </div>
+  <% } else { %>
+    <div class="okuma-cagrisi">
+      <div>
+        <strong>Bu dokümanı okumanız bekleniyor.</strong>
+        <span>İçeriği inceledikten sonra “Okudum, Anladım” onayını vererek dağıtım takibine katkı sağlayın.</span>
+      </div>
+      <form method="post" action="/dokumanlar/<%= dokuman.id %>/oku">
+        <button class="btn btn-birincil" type="submit">✓ Okudum, Anladım</button>
+      </form>
+    </div>
+  <% } %>
+<% } %>
+
+<section class="kart belge-aksiyonlar">
+  <div class="kart-bas">
+    <div><h2>İşlemler</h2><p>Durum ve rolünüze göre kullanabileceğiniz adımlar.</p></div>
+  </div>
+  <div class="aksiyon-grubu">
+    <% if (duzenleyebilir) { %>
+      <a class="btn btn-ikincil" href="/dokumanlar/<%= dokuman.id %>/duzenle">İçeriği Düzenle</a>
+      <form method="post" action="/dokumanlar/<%= dokuman.id %>/onaya-gonder">
+        <button class="btn btn-birincil" type="submit">Onaya Gönder</button>
+      </form>
+    <% } %>
+
+    <% if (onaylayabilir) { %>
+      <form method="post" action="/dokumanlar/<%= dokuman.id %>/onayla">
+        <button class="btn btn-basari" type="submit">✓ Onayla ve Yayınla</button>
+      </form>
+      <details class="belge-aksiyon-detay">
+        <summary class="btn btn-tehlike">Reddet / İade Et</summary>
+        <form method="post" action="/dokumanlar/<%= dokuman.id %>/reddet" class="kucuk-form">
+          <div class="alan">
+            <label for="red-notu">İade gerekçesi</label>
+            <textarea id="red-notu" name="not_metni" rows="3" maxlength="1000" required placeholder="Düzeltilmesi gereken noktaları yazın."></textarea>
+          </div>
+          <button class="btn btn-tehlike" type="submit">Dokümanı İade Et</button>
+        </form>
+      </details>
+    <% } %>
+
+    <% if (['yayinda', 'iptal'].includes(dokuman.durum) && dokuman.revizyon === sonRevizyon && yetkiliMi('dokuman.olustur')) { %>
+      <details class="belge-aksiyon-detay">
+        <summary class="btn btn-ikincil">+ Yeni Revizyon</summary>
+        <form method="post" action="/dokumanlar/<%= dokuman.id %>/revizyon" class="kucuk-form">
+          <div class="alan">
+            <label for="revizyon-notu">Değişiklik notu <span class="zorunlu-yazi">*</span></label>
+            <textarea id="revizyon-notu" name="degisiklik_notu" rows="3" maxlength="1000" required placeholder="Bu revizyonda neler değişti?"></textarea>
+            <span class="ipucu">Yeni revizyon <strong><%= revizyonEtiketi(dokuman.revizyon + 1) %></strong> taslağı olarak açılır; bu revizyon otomatik arşivlenir.</span>
+          </div>
+          <button class="btn btn-birincil" type="submit">Revizyon Taslağı Oluştur</button>
+        </form>
+      </details>
+    <% } %>
+
+    <% if (yetkiliMi('dokuman.onayla') && dokuman.durum !== 'iptal') { %>
+      <form method="post" action="/dokumanlar/<%= dokuman.id %>/arsivle" data-onay="Doküman İptal / Arşiv durumuna alınacak. Devam edilsin mi?">
+        <button class="btn btn-hayalet" type="submit">İptal / Arşivle</button>
+      </form>
+    <% } %>
+
+    <% if (silebilir && dokuman.durum === 'taslak') { %>
+      <form method="post" action="/dokumanlar/<%= dokuman.id %>/sil" data-onay="Taslak tamamen silinecek. Devam edilsin mi?">
+        <button class="btn btn-tehlike" type="submit">Taslağı Sil</button>
+      </form>
+    <% } %>
+
+    <% if (dokuman.dosya_yolu) { %>
+      <a class="btn btn-hayalet" href="/dokumanlar/<%= dokuman.id %>/dosya">Yüklenen Dosyayı İndir</a>
+    <% } %>
+  </div>
+</section>
+
+<div class="iki-kolon belge-detay-kolonlar">
+  <div>
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Doküman İçeriği</h2><p>Şablondaki bölümlere göre hazırlanmış içerik.</p></div>
+        <% if (yetkiliMi('sablon') && duzenlenebilirDurum) { %>
+          <a class="btn btn-kucuk btn-hayalet" href="/sablonlar/<%= tur.kod %>">Şablonu Aç</a>
+        <% } %>
+      </div>
+      <% if (dokuman.dosya_yolu) { %>
+        <div class="dosya-kutu" style="margin-bottom:16px;">
+          <div>
+            <strong>Yüklenen dosya: <%= dokuman.dosya_adi || 'Dosya' %></strong>
+            <span class="metin-kucuk metin-soluk">Bu doküman hazır dosya olarak yüklenmiştir.</span>
+          </div>
+          <a class="btn btn-kucuk btn-ikincil" href="/dokumanlar/<%= dokuman.id %>/dosya">İndir</a>
+        </div>
+      <% } %>
+      <div class="belge-bolumler">
+        <% bolumler.forEach(function (bolum) { %>
+          <section class="belge-bolum">
+            <h3><%= bolum.baslik %></h3>
+            <% if (String(bolum.metin || '').trim()) { %>
+              <div class="belge-metin"><%= bolum.metin %></div>
+            <% } else { %>
+              <p class="metin-soluk metin-kucuk">Bu bölüm henüz doldurulmadı.</p>
+            <% } %>
+          </section>
+        <% }) %>
+        <% if (!bolumler.length) { %><p class="metin-soluk">Bölüm içeriği bulunmuyor.</p><% } %>
+      </div>
+    </section>
+
+    <% if (dokuman.durum === 'yayinda' || dokuman.dosya_turu === 'pdf' || !dokuman.dosya_yolu) { %>
+      <section class="kart">
+        <div class="kart-bas">
+          <div><h2>PDF Önizleme</h2><p>Kurumsal antet, doküman kodu, revizyon ve sayfa numaralarıyla üretilen PDF.</p></div>
+          <a class="btn btn-kucuk btn-hayalet" href="/dokumanlar/<%= dokuman.id %>/pdf?indir=1">PDF İndir</a>
+        </div>
+        <iframe class="pdf-cerceve" src="/dokumanlar/<%= dokuman.id %>/pdf" title="<%= dokuman.kod %> PDF önizleme" loading="lazy"></iframe>
+      </section>
+    <% } else { %>
+      <section class="kart">
+        <div class="kart-bas"><div><h2>Yüklenen Dosya Önizlemesi</h2><p>Excel dosyaları tarayıcıda önizlenemez; indirerek açabilirsiniz.</p></div></div>
+        <a class="btn btn-birincil" href="/dokumanlar/<%= dokuman.id %>/pdf">Dosyayı İndir</a>
+      </section>
+    <% } %>
+
+    <% if (yetkiliMi('dokuman.dagit')) { %>
+      <section class="kart" id="okuma-takibi">
+        <div class="kart-bas">
+          <div>
+            <h2>“Okudum, Anladım” Takibi</h2>
+            <p>Yayınlanan dokümanın hedef departman personeli tarafından okunma durumu.</p>
+          </div>
+          <span class="rozet <%= yuzde === 100 ? 'rozet-tamamlandi' : yuzde > 0 ? 'rozet-beklemede' : 'rozet-taslak' %>"><%= yuzde %>%</span>
+        </div>
+        <div class="okuma-ozet">
+          <div class="ilerleme buyuk"><span style="width:<%= yuzde %>%"></span></div>
+          <div class="okuma-sayilar">
+            <span><strong><%= dokuman.okuyan_sayisi %></strong> okuyan</span>
+            <span><strong><%= Math.max(0, dokuman.okuyucu_sayisi - dokuman.okuyan_sayisi) %></strong> bekleyen</span>
+            <span><strong><%= dokuman.okuyucu_sayisi %></strong> toplam</span>
+          </div>
+        </div>
+        <% if (okuyucular.length) { %>
+          <div class="tablo-sarmal" style="margin-top:16px;">
+            <table class="tablo">
+              <thead><tr><th>Personel</th><th>Departman</th><th>Durum</th><th>Okunma Tarihi</th></tr></thead>
+              <tbody>
+                <% okuyucular.forEach(function (okuyucu) { %>
+                  <tr>
+                    <td>
+                      <div class="hucre-ad">
+                        <span class="avatar"><%= basHarfler(okuyucu.ad) %></span>
+                        <div><strong><%= okuyucu.ad %></strong><span class="metin-kucuk metin-soluk" style="display:block;"><%= okuyucu.email %></span></div>
+                      </div>
+                    </td>
+                    <td><%= okuyucu.departman_ad || '—' %></td>
+                    <td>
+                      <% if (okuyucu.okundu) { %><span class="rozet rozet-tamamlandi">Okudu</span>
+                      <% } else { %><span class="rozet rozet-beklemede">Bekliyor</span><% } %>
+                    </td>
+                    <td class="metin-kucuk metin-soluk"><%= okuyucu.okunma_tarihi ? zamanTr(okuyucu.okunma_tarihi) : '—' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } else { %>
+          <div class="bilgi-kutu">Doküman henüz yayınlanmadığı için okuma listesi oluşmadı. Onaylandığında hedef departman personeli burada listelenir.</div>
+        <% } %>
+      </section>
+    <% } %>
+  </div>
+
+  <aside class="dikey">
+    <section class="kart">
+      <div class="kart-bas"><div><h2>Doküman Bilgileri</h2></div></div>
+      <dl class="tanim-listesi">
+        <dt>Kod</dt><dd><span class="belge-kod"><%= dokuman.kod %></span></dd>
+        <dt>Tür</dt><dd><%= tur.ad %></dd>
+        <dt>Revizyon</dt><dd><span class="mono"><%= revizyonEtiketi(dokuman.revizyon) %></span></dd>
+        <dt>Hazırlayan</dt><dd><%= dokuman.hazirlayan_ad || '—' %></dd>
+        <dt>Onaylayan</dt><dd><%= dokuman.onaylayan_ad || '—' %></dd>
+        <dt>Onay tarihi</dt><dd><%= dokuman.onay_tarihi ? zamanTr(dokuman.onay_tarihi) : '—' %></dd>
+        <dt>Yayın tarihi</dt><dd><%= dokuman.yayin_tarihi ? zamanTr(dokuman.yayin_tarihi) : '—' %></dd>
+        <dt>Son güncelleme</dt><dd><%= zamanTr(dokuman.guncelleme_tarihi) %></dd>
+        <% if (dokuman.degisiklik_notu) { %><dt>Değişiklik notu</dt><dd><%= dokuman.degisiklik_notu %></dd><% } %>
+      </dl>
+      <div class="hedef-departmanlar">
+        <span class="tanim-baslik">Hedef departmanlar</span>
+        <% if (hedefDepartmanlar.length) { %>
+          <% hedefDepartmanlar.forEach(function (d) { %><span class="cip"><%= d.ad %></span><% }) %>
+        <% } else { %>
+          <span class="metin-soluk metin-kucuk">Henüz seçilmedi.</span>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas"><div><h2>Revizyon Geçmişi</h2><p>Bu doküman koduna ait tüm revizyonlar.</p></div></div>
+      <div class="revizyon-listesi">
+        <% revizyonlar.forEach(function (revizyon) { %>
+          <a class="revizyon-satiri <%= revizyon.id === dokuman.id ? 'aktif' : '' %>" href="/dokumanlar/<%= revizyon.id %>">
+            <span class="revizyon-etiket"><%= revizyonEtiketi(revizyon.revizyon) %></span>
+            <span class="revizyon-bilgi">
+              <strong><%= dokumanDurumEtiketi(revizyon.durum) %></strong>
+              <small><%= revizyon.degisiklik_notu ? kisaMetin(revizyon.degisiklik_notu, 60) : (revizyon.revizyon === 0 ? 'İlk yayın' : 'Değişiklik notu yok') %></small>
+            </span>
+            <span class="metin-kucuk metin-soluk"><%= revizyon.onay_tarihi ? tarihTr(String(revizyon.onay_tarihi).slice(0, 10)) : '—' %></span>
+          </a>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas"><div><h2>Onay Akışı</h2><p>Doküman üzerinde yapılan işlemlerin kronolojisi.</p></div></div>
+      <% if (onaylar.length) { %>
+        <ol class="zaman-cizelgesi">
+          <% onaylar.forEach(function (olay) { %>
+            <li class="zaman-olay islem-<%= olay.islem %>">
+              <span class="zaman-nokta"></span>
+              <div>
+                <strong><%= islemEtiketleri[olay.islem] || olay.islem %></strong>
+                <span><%= olay.kullanici_ad || 'Sistem' %> · <%= zamanTr(olay.tarih) %></span>
+                <% if (olay.not_metni) { %><p><%= olay.not_metni %></p><% } %>
+              </div>
+            </li>
+          <% }) %>
+        </ol>
+      <% } else { %>
+        <p class="metin-kucuk metin-soluk" style="margin:0;">Henüz işlem kaydı yok.</p>
+      <% } %>
+    </section>
+  </aside>
+</div>
+
+<%- include('partials/alt') %>

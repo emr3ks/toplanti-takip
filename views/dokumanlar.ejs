@@ -1,0 +1,101 @@
+<%- include('partials/ust', { aktifSayfa: 'dokumanlar', aktifTur: aktifTur }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1><%= tur ? tur.cogul : 'Doküman Yönetimi' %></h1>
+    <p><%= tur ? tur.aciklama : 'Prosedür, talimat, el kitabı, liste ve formlarınızı tek yerden yönetin; şablonlar, onay akışı ve okuma takibi QDMS içinde.' %></p>
+  </div>
+  <div class="sayfa-eylem">
+    <% if (yetkiliMi('sablon')) { %>
+      <a class="btn btn-hayalet" href="/sablonlar">Şablon Tasarımcısı</a>
+    <% } %>
+    <% if (yetkiliMi('dokuman.olustur')) { %>
+      <a class="btn btn-birincil" href="/dokumanlar/yeni<%= tur ? '?tur=' + tur.kod : '' %>">+ Yeni <%= tur ? tur.ad : 'Doküman' %></a>
+    <% } %>
+  </div>
+</div>
+
+<div class="belge-filtreler">
+  <div class="sekmeler">
+    <a class="sekme <%= !tur ? 'aktif' : '' %>" href="/dokumanlar<%= durum !== 'hepsi' ? '?durum=' + durum : '' %>">
+      Tümü <span class="sayi"><%= toplam %></span>
+    </a>
+    <% TUR_KODLARI.forEach(function (kod) { const t = DOKUMAN_TURLERI[kod]; %>
+      <a class="sekme <%= tur && tur.kod === kod ? 'aktif' : '' %>" href="/dokumanlar?tur=<%= kod %><%= durum !== 'hepsi' ? '&durum=' + durum : '' %>">
+        <span class="tur-nokta" style="background: <%= t.renk %>"></span><%= t.cogul %> <span class="sayi"><%= turSayilari[kod] || 0 %></span>
+      </a>
+    <% }) %>
+  </div>
+
+  <form class="belge-arama" method="get" action="/dokumanlar">
+    <% if (tur) { %><input type="hidden" name="tur" value="<%= tur.kod %>"><% } %>
+    <select name="durum" aria-label="Durum filtresi" data-otomatik-gonder>
+      <option value="hepsi" <%= durum === 'hepsi' ? 'selected' : '' %>>Tüm durumlar</option>
+      <% DOKUMAN_DURUM_ANAHTARLARI.forEach(function (anahtar) { %>
+        <option value="<%= anahtar %>" <%= durum === anahtar ? 'selected' : '' %>><%= DOKUMAN_DURUMLARI[anahtar] %></option>
+      <% }) %>
+    </select>
+    <input class="girdi" type="search" name="q" value="<%= arama %>" placeholder="Kod, başlık veya açıklama ara…" aria-label="Doküman ara">
+    <button class="btn btn-hayalet" type="submit">Ara</button>
+  </form>
+</div>
+
+<% if (dokumanlar.length) { %>
+  <div class="tablo-sarmal">
+    <table class="tablo belge-tablo">
+      <thead>
+        <tr>
+          <th>Kod</th>
+          <th>Doküman</th>
+          <th>Revizyon</th>
+          <th>Durum</th>
+          <th>Hazırlayan</th>
+          <th>Okunma</th>
+          <th>Güncelleme</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% dokumanlar.forEach(function (belge) { %>
+          <tr class="belge-tr-<%= dokumanDurumSinifi(belge.durum) %>">
+            <td><span class="belge-kod"><%= belge.kod %></span></td>
+            <td>
+              <a class="belge-baslik-link" href="/dokumanlar/<%= belge.id %>"><strong><%= belge.baslik %></strong></a>
+              <span class="belge-alt"><%= belge.tur_ad %><%= belge.aciklama ? ' · ' + kisaMetin(belge.aciklama, 70) : '' %></span>
+            </td>
+            <td><span class="mono"><%= revizyonEtiketi(belge.revizyon) %></span></td>
+            <td><span class="rozet rozet-dok-<%= dokumanDurumSinifi(belge.durum) %>"><%= dokumanDurumEtiketi(belge.durum) %></span></td>
+            <td><%= belge.hazirlayan_ad || '—' %></td>
+            <td>
+              <% if (belge.okuyucu_sayisi) { %>
+                <% const yuzde = Math.round((belge.okuyan_sayisi / belge.okuyucu_sayisi) * 100); %>
+                <div class="okuma-mini" title="<%= belge.okuyan_sayisi %>/<%= belge.okuyucu_sayisi %> kişi okudu">
+                  <span class="ilerleme"><span style="width:<%= yuzde %>%"></span></span>
+                  <small><%= yuzde %>%</small>
+                </div>
+              <% } else { %>
+                <span class="metin-soluk">—</span>
+              <% } %>
+            </td>
+            <td class="metin-kucuk metin-soluk"><%= tarihTr(String(belge.guncelleme_tarihi || '').slice(0, 10)) %></td>
+            <td><a class="btn btn-kucuk btn-hayalet" href="/dokumanlar/<%= belge.id %>">Aç</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <p class="metin-kucuk metin-soluk liste-alt-not"><%= dokumanlar.length %> doküman listeleniyor.<% if (arama) { %> “<%= arama %>” aramasına göre.<% } %></p>
+<% } else { %>
+  <div class="kart">
+    <div class="bos">
+      <div class="bos-ikon"><%- include('partials/ikon', { ad: 'dokuman' }) %></div>
+      <h3>Henüz doküman yok</h3>
+      <p><%= tur ? 'Bu türde henüz bir doküman oluşturulmamış.' : 'İlk dokümanınızı şablonlardan üreterek QDMS’i kullanmaya başlayın.' %></p>
+      <% if (yetkiliMi('dokuman.olustur')) { %>
+        <a class="btn btn-birincil" href="/dokumanlar/yeni<%= tur ? '?tur=' + tur.kod : '' %>">+ Yeni Doküman</a>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<%- include('partials/alt') %>

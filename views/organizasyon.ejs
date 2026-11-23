@@ -1,0 +1,197 @@
+<%- include('partials/ust', { aktifSayfa: 'organizasyon' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Organizasyon ve Kullanıcılar</h1>
+    <p>Departmanları tanımlayın, kullanıcıları departmanlara atayın ve rol bazlı yetkileri yönetin.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <% if (!duzenleyebilir) { %><span class="rozet rozet-acik">Salt okunur görünüm</span><% } %>
+  </div>
+</div>
+
+<div class="bilgi-kutu" style="margin-bottom:18px;">
+  <strong>Roller ve yetkiler:</strong>
+  <span class="rol-yetki"><span class="rozet rol-admin">Sistem Yöneticisi</span> tüm modüller, kullanıcılar ve ayarlar</span>
+  <span class="rol-yetki"><span class="rozet rol-kalite">Kalite Yöneticisi</span> şablonlar, doküman onayı, dağıtım ve okuma takibi</span>
+  <span class="rol-yetki"><span class="rozet rol-hazirlayan">Doküman Hazırlayan</span> doküman oluşturma ve taslak düzenleme</span>
+  <span class="rol-yetki"><span class="rozet rol-onaylayan">Onaylayan</span> kontrol/onay bekleyen dokümanları onaylama</span>
+  <span class="rol-yetki"><span class="rozet rol-kullanici">Standart Kullanıcı</span> kendisine dağıtılan dokümanları okuma ve onaylama</span>
+</div>
+
+<div class="iki-kolon org-kolonlar">
+  <div class="dikey">
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Departmanlar</h2><p>Personelin bağlı olduğu birimler; doküman dağıtımı bu birimlere göre yapılır.</p></div>
+        <span class="rozet rozet-acik"><%= departmanlar.length %> departman</span>
+      </div>
+
+      <% if (duzenleyebilir) { %>
+        <form method="post" action="/organizasyon/departmanlar" class="form-grid" style="margin-bottom:18px;">
+          <div class="alan">
+            <label for="departman-ad">Yeni departman adı</label>
+            <input class="girdi" type="text" id="departman-ad" name="ad" placeholder="Örn. Ar-Ge" maxlength="80" required>
+          </div>
+          <div class="alan">
+            <label for="departman-aciklama">Açıklama</label>
+            <input class="girdi" type="text" id="departman-aciklama" name="aciklama" placeholder="Kısa açıklama" maxlength="300">
+          </div>
+          <div class="alan tam"><button class="btn btn-ikincil" type="submit">+ Departman Ekle</button></div>
+        </form>
+      <% } %>
+
+      <div class="tablo-sarmal">
+        <table class="tablo">
+          <thead><tr><th>Departman</th><th>Açıklama</th><th>Kullanıcı</th><% if (duzenleyebilir) { %><th></th><% } %></tr></thead>
+          <tbody>
+            <% departmanlar.forEach(function (departman) { %>
+              <tr>
+                <td><strong><%= departman.ad %></strong></td>
+                <td class="metin-kucuk metin-soluk"><%= departman.aciklama || '—' %></td>
+                <td><span class="rozet rozet-acik"><%= departman.kullanici_sayisi %></span></td>
+                <% if (duzenleyebilir) { %>
+                  <td>
+                    <details class="duzenle">
+                      <summary>Düzenle</summary>
+                      <div class="duzenle-form">
+                        <form method="post" action="/organizasyon/departmanlar/<%= departman.id %>" class="dikey">
+                          <div class="alan"><label>Departman adı</label><input class="girdi" type="text" name="ad" value="<%= departman.ad %>" maxlength="80" required></div>
+                          <div class="alan"><label>Açıklama</label><input class="girdi" type="text" name="aciklama" value="<%= departman.aciklama %>" maxlength="300"></div>
+                          <button class="btn btn-ikincil btn-kucuk" type="submit">Kaydet</button>
+                        </form>
+                        <form method="post" action="/organizasyon/departmanlar/<%= departman.id %>/sil" data-onay="“<%= departman.ad %>” departmanı silinecek. Devam edilsin mi?" style="margin-top:8px;">
+                          <button class="btn btn-tehlike btn-kucuk" type="submit">Departmanı Sil</button>
+                        </form>
+                      </div>
+                    </details>
+                  </td>
+                <% } %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Kullanıcılar</h2><p>Roller ve departman atamaları. Pasif kullanıcılar giriş yapamaz ve dağıtım listelerine eklenmez.</p></div>
+        <span class="rozet rozet-acik"><%= kullanicilar.filter(function (k) { return k.aktif; }).length %> aktif</span>
+      </div>
+
+      <% if (duzenleyebilir) { %>
+        <details class="yeni-kullanici">
+          <summary class="btn btn-ikincil btn-kucuk">+ Yeni Kullanıcı</summary>
+          <form method="post" action="/organizasyon/kullanicilar" class="form-grid kucuk-form">
+            <div class="alan"><label for="yeni-ad">Ad soyad</label><input class="girdi" type="text" id="yeni-ad" name="ad" maxlength="120" required></div>
+            <div class="alan"><label for="yeni-email">E-posta</label><input class="girdi" type="email" id="yeni-email" name="email" maxlength="254" required></div>
+            <div class="alan">
+              <label for="yeni-rol">Rol</label>
+              <select id="yeni-rol" name="rol" required>
+                <% ROL_ANAHTARLARI.forEach(function (rol) { %><option value="<%= rol %>"><%= ROLLER[rol] %></option><% }) %>
+              </select>
+            </div>
+            <div class="alan">
+              <label for="yeni-departman">Departman</label>
+              <select id="yeni-departman" name="departman_id">
+                <option value="">— Seçilmedi —</option>
+                <% departmanlar.forEach(function (d) { %><option value="<%= d.id %>"><%= d.ad %></option><% }) %>
+              </select>
+            </div>
+            <div class="alan"><label for="yeni-sifre">Geçici şifre</label><input class="girdi" type="password" id="yeni-sifre" name="sifre" minlength="8" autocomplete="new-password" required><span class="ipucu">En az 8 karakter.</span></div>
+            <div class="alan"><label class="onay-alani" style="margin-top:24px;"><input type="checkbox" name="aktif" value="1" checked><span>Hesap aktif</span></label></div>
+            <div class="alan tam"><button class="btn btn-birincil" type="submit">Kullanıcıyı Oluştur</button></div>
+          </form>
+        </details>
+      <% } %>
+
+      <div class="tablo-sarmal">
+        <table class="tablo">
+          <thead><tr><th>Kullanıcı</th><th>Rol</th><th>Departman</th><th>Durum</th><% if (duzenleyebilir) { %><th></th><% } %></tr></thead>
+          <tbody>
+            <% kullanicilar.forEach(function (kisi) { %>
+              <tr class="<%= kisi.aktif ? '' : 'pasif-satir' %>">
+                <td>
+                  <div class="hucre-ad">
+                    <span class="avatar"><%= basHarfler(kisi.ad) %></span>
+                    <div><strong><%= kisi.ad %><%= kisi.id === kullanici.id ? ' (siz)' : '' %></strong><span class="metin-kucuk metin-soluk" style="display:block;"><%= kisi.email %></span></div>
+                  </div>
+                </td>
+                <td><span class="rozet rol-<%= kisi.rol %>"><%= ROLLER[kisi.rol] %></span></td>
+                <td><%= kisi.departman_ad || '—' %></td>
+                <td><% if (kisi.aktif) { %><span class="rozet rozet-tamamlandi">Aktif</span><% } else { %><span class="rozet rozet-iptal">Pasif</span><% } %></td>
+                <% if (duzenleyebilir) { %>
+                  <td>
+                    <details class="duzenle">
+                      <summary>Düzenle</summary>
+                      <div class="duzenle-form">
+                        <form method="post" action="/organizasyon/kullanicilar/<%= kisi.id %>" class="dikey">
+                          <div class="alan"><label>Ad soyad</label><input class="girdi" type="text" name="ad" value="<%= kisi.ad %>" maxlength="120" required></div>
+                          <div class="alan"><label>E-posta</label><input class="girdi" type="email" name="email" value="<%= kisi.email %>" maxlength="254" required></div>
+                          <div class="form-grid">
+                            <div class="alan">
+                              <label>Rol</label>
+                              <select name="rol">
+                                <% ROL_ANAHTARLARI.forEach(function (rol) { %><option value="<%= rol %>" <%= kisi.rol === rol ? 'selected' : '' %>><%= ROLLER[rol] %></option><% }) %>
+                              </select>
+                            </div>
+                            <div class="alan">
+                              <label>Departman</label>
+                              <select name="departman_id">
+                                <option value="">— Seçilmedi —</option>
+                                <% departmanlar.forEach(function (d) { %><option value="<%= d.id %>" <%= kisi.departman_id === d.id ? 'selected' : '' %>><%= d.ad %></option><% }) %>
+                              </select>
+                            </div>
+                          </div>
+                          <div class="alan"><label>Yeni şifre (isteğe bağlı)</label><input class="girdi" type="password" name="sifre" minlength="8" autocomplete="new-password" placeholder="Boş bırakılırsa değişmez"></div>
+                          <label class="onay-alani"><input type="checkbox" name="aktif" value="1" <%= kisi.aktif ? 'checked' : '' %>><span>Hesap aktif</span></label>
+                          <button class="btn btn-ikincil btn-kucuk" type="submit">Kaydet</button>
+                        </form>
+                      </div>
+                    </details>
+                  </td>
+                <% } %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <aside class="dikey">
+    <section class="kart">
+      <div class="kart-bas"><div><h2>Profilim</h2><p>Hesap bilgileriniz.</p></div></div>
+      <div class="profil-karti">
+        <span class="avatar buyuk"><%= basHarfler(kullanici.ad) %></span>
+        <div>
+          <strong><%= kullanici.ad %></strong>
+          <span><%= kullanici.email %></span>
+          <span><span class="rozet rol-<%= kullanici.rol %>"><%= ROLLER[kullanici.rol] %></span> <%= kullanici.departman_ad || '' %></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas"><div><h2>Şifre Değiştir</h2><p>Güvenliğiniz için düzenli olarak güncelleyin.</p></div></div>
+      <form method="post" action="/organizasyon/sifre" class="dikey">
+        <div class="alan"><label for="mevcut-sifre">Mevcut şifre</label><input class="girdi" type="password" id="mevcut-sifre" name="mevcut_sifre" autocomplete="current-password" required></div>
+        <div class="alan"><label for="yeni-sifre">Yeni şifre</label><input class="girdi" type="password" id="yeni-sifre" name="yeni_sifre" minlength="8" autocomplete="new-password" required></div>
+        <div class="alan"><label for="yeni-sifre-tekrar">Yeni şifre (tekrar)</label><input class="girdi" type="password" id="yeni-sifre-tekrar" name="yeni_sifre_tekrar" minlength="8" autocomplete="new-password" required></div>
+        <button class="btn btn-birincil" type="submit">Şifreyi Güncelle</button>
+      </form>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas"><div><h2>Özet</h2></div></div>
+      <div class="mini-istatistik">
+        <div><strong><%= departmanlar.length %></strong><span>Departman</span></div>
+        <div><strong><%= kullanicilar.length %></strong><span>Kullanıcı</span></div>
+        <div><strong><%= kullanicilar.filter(function (k) { return k.rol === 'admin' && k.aktif; }).length %></strong><span>Yönetici</span></div>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<%- include('partials/alt') %>

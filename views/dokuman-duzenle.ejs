@@ -1,0 +1,29 @@
+<%- include('partials/ust', { aktifSayfa: 'dokumanlar', aktifTur: dokuman.tur_kod }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Dokümanı Düzenle</h1>
+    <p><span class="belge-kod"><%= dokuman.kod %></span> · <%= dokuman.baslik %> · <span class="mono"><%= revizyonEtiketi(dokuman.revizyon) %></span></p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/dokumanlar/<%= dokuman.id %>">Dokümana Dön</a>
+  </div>
+</div>
+
+<%- include('partials/dokuman-form', {
+  islem: '/dokumanlar/' + dokuman.id,
+  tur: tur,
+  kod: dokuman.kod,
+  bolumler: bolumler,
+  departmanlar: departmanlar,
+  seciliDepartmanlar: seciliDepartmanlar,
+  form: form,
+  dosyaVar: Boolean(dokuman.dosya_yolu),
+  dosyaAdi: dokuman.dosya_adi || '',
+  kaydetEtiketi: 'Değişiklikleri Kaydet',
+  donusLink: '/dokumanlar/' + dokuman.id,
+  sablon: sablon,
+  dokuman: dokuman
+}) %>
+
+<%- include('partials/alt') %>

@@ -1,9 +1,9 @@
-<%- include('partials/ust', { aktifSayfa: 'ayarlar' }) %>
+﻿<%- include('partials/ust', { aktifSayfa: 'ayarlar' }) %>
 
 <div class="sayfa-bas">
   <div>
-    <h1>Ayarlar</h1>
-    <p>SMTP bilgilerini, toplantı raporu alıcısını ve günlük hatırlatma zamanını yönetin.</p>
+    <h1>Sistem Ayarları</h1>
+    <p>Şirket adı ve logosu, SMTP e-posta bilgileri, toplantı raporu alıcısı ve günlük hatırlatma zamanı.</p>
   </div>
   <div class="sayfa-eylem">
     <a class="btn btn-hayalet" href="/emailler">E-posta Günlüğü</a>
@@ -11,6 +11,41 @@
 </div>
 
 <%- include('partials/bildirim') %>
+
+<section class="kart">
+  <div class="kart-bas">
+    <div>
+      <h2>Şirket Kimliği</h2>
+      <p>Şirket adı ve logosu arayüzde, PDF antetlerinde ve şablon önizlemelerinde kullanılır.</p>
+    </div>
+    <span class="rozet rozet-acik">QDMS</span>
+  </div>
+  <form method="post" action="/ayarlar/sirket" enctype="multipart/form-data" class="sirket-form">
+    <div class="form-grid">
+      <div class="alan">
+        <label for="sirket-adi">Şirket adı</label>
+        <input class="girdi" type="text" id="sirket-adi" name="sirket_adi" value="<%= sirket.ad %>" maxlength="120" required>
+        <span class="ipucu">PDF antetinde ve sol menüde görünen kurum adı.</span>
+      </div>
+      <div class="alan">
+        <label for="sirket-logo">Şirket logosu</label>
+        <input class="girdi dosya-girdi" type="file" id="sirket-logo" name="logo" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
+        <span class="ipucu">PNG, JPG veya WEBP · en fazla 10 MB. Yüklenmezse baş harfler kullanılır.</span>
+      </div>
+      <div class="alan tam logo-mevcut">
+        <% if (sirket.logo) { %>
+          <div class="logo-onizleme kucuk"><img src="/sirket-logo" alt="Şirket logosu"></div>
+          <label class="onay-alani"><input type="checkbox" name="logo_sil" value="1"><span>Mevcut şirket logosunu kaldır</span></label>
+        <% } else { %>
+          <span class="metin-kucuk metin-soluk">Henüz şirket logosu yüklenmedi.</span>
+        <% } %>
+      </div>
+    </div>
+    <div class="form-eylem">
+      <button class="btn btn-birincil" type="submit">Şirket Bilgilerini Kaydet</button>
+    </div>
+  </form>
+</section>
 
 <div class="iki-kolon">
   <form class="kart" method="post" action="/ayarlar">
@@ -55,7 +90,7 @@
         </div>
         <div class="alan">
           <label for="smtp-gonderen-ad">Gönderen adı</label>
-          <input class="girdi" type="text" id="smtp-gonderen-ad" name="smtp_from_name" value="<%= form.smtpFromName %>" placeholder="Toplantı Takip">
+          <input class="girdi" type="text" id="smtp-gonderen-ad" name="smtp_from_name" value="<%= form.smtpFromName %>" placeholder="Kurumsal Kalite Yönetim Sistemi">
         </div>
         <div class="alan">
           <label for="smtp-gonderen-email">Gönderen e-posta</label>
@@ -142,6 +177,9 @@
         </div>
         <div class="bilgi-kutu">
           Sunucu çalıştığı sürece zamanlayıcı aktiftir. Bilgisayar kapalıyken hatırlatma gönderilmez.
+        </div>
+        <div class="bilgi-kutu">
+          <strong>Sunucu portu:</strong> <span class="mono"><%= sunucuPortu %></span> · <span class="mono">PORT</span> ortam değişkeniyle değiştirilebilir.
         </div>
       </div>
     </div>

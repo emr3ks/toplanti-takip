@@ -1,0 +1,165 @@
+<%- include('partials/ust', { aktifSayfa: 'sablonlar' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <div class="belge-detay-ust">
+      <span class="tur-secici-ikon" style="background:<%= tur.renk %>"><%= tur.kod %></span>
+      <span class="rozet rozet-tur" style="--tur-renk: <%= tur.renk %>"><%= tur.ad %></span>
+    </div>
+    <h1><%= tur.ad %> Şablonu</h1>
+    <p>Bu şablon, oluşturulan tüm <%= tur.cogul.toLocaleLowerCase('tr-TR') %> için antet, bölüm ve alt bilgi düzenini belirler.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/sablonlar">Şablonlara Dön</a>
+    <a class="btn btn-ikincil" href="/sablonlar/<%= tur.kod %>/onizleme" target="_blank" rel="noopener">PDF Önizleme</a>
+  </div>
+</div>
+
+<form class="belge-form" method="post" action="/sablonlar/<%= tur.kod %>" enctype="multipart/form-data">
+  <div class="belge-form-ana">
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Sayfa Düzeni</h2><p>Antet rengi, kenarlık stili ve şablon adı PDF’in görünümünü belirler.</p></div>
+      </div>
+      <div class="form-grid">
+        <div class="alan tam">
+          <label for="sablon-baslik">Şablon adı</label>
+          <input class="girdi" type="text" id="sablon-baslik" name="baslik" value="<%= sablon.baslik %>" maxlength="120" required>
+        </div>
+        <div class="alan">
+          <label for="antet-renk">Antet / tablo rengi</label>
+          <div class="renk-secici">
+            <input type="color" id="antet-renk" name="antet_renk" value="<%= sablon.antet_renk %>" data-renk-secici>
+            <span class="renk-ornek" data-renk-ornek style="background:<%= sablon.antet_renk %>"></span>
+            <span class="mono metin-soluk" data-renk-deger><%= sablon.antet_renk %></span>
+          </div>
+          <span class="ipucu">Kurumsal antet bandı ve doküman bilgi tablosu bu renkte üretilir.</span>
+        </div>
+        <div class="alan">
+          <label for="kenarlik-stili">Kenarlık stili</label>
+          <select id="kenarlik-stili" name="kenarlik_stili">
+            <% kenarlikStilleri.forEach(function (stil) { %>
+              <option value="<%= stil.deger %>" <%= sablon.kenarlik_stili === stil.deger ? 'selected' : '' %>><%= stil.ad %></option>
+            <% }) %>
+          </select>
+          <span class="ipucu">Antet tablosu ve hazırlayan/onaylayan alt bilgi kutularında uygulanır.</span>
+        </div>
+        <div class="alan">
+          <label for="altbilgi-hazirlayan">Alt bilgi — sol kutu etiketi</label>
+          <input class="girdi" type="text" id="altbilgi-hazirlayan" name="altbilgi_hazirlayan" value="<%= sablon.altbilgi_hazirlayan %>" maxlength="60">
+        </div>
+        <div class="alan">
+          <label for="altbilgi-onaylayan">Alt bilgi — sağ kutu etiketi</label>
+          <input class="girdi" type="text" id="altbilgi-onaylayan" name="altbilgi_onaylayan" value="<%= sablon.altbilgi_onaylayan %>" maxlength="60">
+        </div>
+      </div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Kurumsal Logo</h2><p>Bu şablona özel logo. Yüklenmezse Sistem Ayarları’ndaki şirket logosu kullanılır.</p></div>
+      </div>
+      <div class="logo-yukleme">
+        <div class="logo-onizleme">
+          <% if (logoVar) { %>
+            <img src="/sablonlar/<%= tur.kod %>/logo" alt="<%= tur.ad %> şablonu logosu">
+          <% } else if (sirket && sirket.logo) { %>
+            <img src="/sirket-logo" alt="Şirket logosu">
+          <% } else { %>
+            <span class="logo-bos"><%= sirketBasHarfleri %></span>
+          <% } %>
+        </div>
+        <div class="logo-yukleme-form">
+          <div class="alan">
+            <label for="sablon-logo">Logo dosyası</label>
+            <input class="girdi dosya-girdi" type="file" id="sablon-logo" name="logo" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
+            <span class="ipucu">PNG, JPG veya WEBP · en fazla 10 MB.</span>
+          </div>
+          <% if (logoVar) { %>
+            <label class="onay-alani">
+              <input type="checkbox" name="logo_sil" value="1">
+              <span>Şablona özel logoyu kaldır (şirket logosuna dön)</span>
+            </label>
+          <% } %>
+        </div>
+      </div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Standart Bölümler</h2>
+          <p>Yeni doküman formunda görünecek bölüm başlıkları, açıklamalar ve zorunluluk durumu.</p>
+        </div>
+        <button class="btn btn-ikincil btn-kucuk" type="button" data-bolum-ekle>+ Bölüm Ekle</button>
+      </div>
+
+      <div class="bolum-editor" id="bolum-listesi">
+        <% sablon.bolumler.forEach(function (bolum) { %>
+          <div class="bolum-editor-satiri">
+            <span class="bolum-siralama"><%= '≡' %></span>
+            <div class="bolum-editor-alanlar">
+              <input class="girdi" type="text" name="bolum_baslik" value="<%= bolum.baslik %>" placeholder="Örn. 1. Amaç" maxlength="160" aria-label="Bölüm başlığı">
+              <input class="girdi" type="text" name="bolum_ipucu" value="<%= bolum.ipucu %>" placeholder="Kullanıcıya gösterilecek kısa açıklama" maxlength="400" aria-label="Bölüm ipucu">
+            </div>
+            <select class="bolum-zorunlu" name="bolum_zorunlu" aria-label="Zorunlu mu">
+              <option value="0" <%= bolum.zorunlu ? '' : 'selected' %>>İsteğe bağlı</option>
+              <option value="1" <%= bolum.zorunlu ? 'selected' : '' %>>Zorunlu</option>
+            </select>
+            <button class="bolum-sil" type="button" data-bolum-sil aria-label="Bölümü kaldır">×</button>
+          </div>
+        <% }) %>
+      </div>
+      <% if (!sablon.bolumler.length) { %>
+        <div class="bilgi-kutu">Henüz bölüm tanımlanmamış. “Bölüm Ekle” ile başlayın.</div>
+      <% } %>
+      <p class="ipucu" style="margin:10px 0 0;">Yeni dokümanlar bu bölümleri otomatik alır; mevcut dokümanların içeriği değişmez. En az bir bölüm tanımlanmalıdır.</p>
+    </section>
+
+    <div class="form-eylem belge-form-eylem">
+      <button class="btn btn-birincil" type="submit">Şablonu Kaydet</button>
+      <a class="btn btn-hayalet" href="/sablonlar">Vazgeç</a>
+    </div>
+  </div>
+
+  <aside class="belge-form-yan">
+    <div class="kart">
+      <div class="kart-bas"><div><h2>Şablon Bilgisi</h2><p>Bu tür için geçerli tasarım.</p></div></div>
+      <dl class="tanim-listesi">
+        <dt>Tür kodu</dt><dd><span class="mono"><%= tur.kod %></span></dd>
+        <dt>Bölüm sayısı</dt><dd><%= sablon.bolumler.length %></dd>
+        <dt>Kenarlık</dt><dd><%= sablon.kenarlik_stili === 'kesikli' ? 'Kesikli' : sablon.kenarlik_stili === 'cift' ? 'Çift' : 'Düz' %></dd>
+        <dt>Son güncelleme</dt><dd><%= sablon.guncelleme_tarihi ? zamanTr(sablon.guncelleme_tarihi) : '—' %></dd>
+      </dl>
+      <div class="bilgi-kutu" style="margin-top:12px;">
+        <strong>PDF’de neler var?</strong><br>
+        Şirket adı ve logo, doküman kodu, tür, revizyon, yayın tarihi, “Sayfa 1/X” numarası, hazırlayan/onaylayan kutuları ve <strong>TASLAK</strong> filigranı (taslak durumunda).
+      </div>
+    </div>
+    <div class="kart">
+      <div class="kart-bas"><div><h2>Bölüm Sırası</h2><p>Bölümler formda ve PDF’de bu sırayla görünür.</p></div></div>
+      <ol class="bolum-sira-listesi">
+        <% sablon.bolumler.forEach(function (bolum) { %>
+          <li><%= bolum.baslik %><% if (bolum.zorunlu) { %><span class="rozet rozet-beklemede">Zorunlu</span><% } %></li>
+        <% }) %>
+      </ol>
+    </div>
+  </aside>
+</form>
+
+<template id="bolum-satiri-sablonu">
+  <div class="bolum-editor-satiri">
+    <span class="bolum-siralama">≡</span>
+    <div class="bolum-editor-alanlar">
+      <input class="girdi" type="text" name="bolum_baslik" value="" placeholder="Örn. 1. Amaç" maxlength="160" aria-label="Bölüm başlığı">
+      <input class="girdi" type="text" name="bolum_ipucu" value="" placeholder="Kullanıcıya gösterilecek kısa açıklama" maxlength="400" aria-label="Bölüm ipucu">
+    </div>
+    <select class="bolum-zorunlu" name="bolum_zorunlu" aria-label="Zorunlu mu">
+      <option value="0">İsteğe bağlı</option>
+      <option value="1">Zorunlu</option>
+    </select>
+    <button class="bolum-sil" type="button" data-bolum-sil aria-label="Bölümü kaldır">×</button>
+  </div>
+</template>
+
+<%- include('partials/alt') %>

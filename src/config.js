@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const path = require('node:path');
 
@@ -32,7 +32,7 @@ function loadConfig(env = process.env, kok = KOK) {
     dataDir,
     dbPath,
     outboxDir,
-    port: sayi(env.PORT, 3000),
+    port: sayi(env.PORT, 3005),
     host: env.HOST || '127.0.0.1',
     cronKapali: mantiksal(env.DISABLE_CRON, false),
     env: {
@@ -43,7 +43,7 @@ function loadConfig(env = process.env, kok = KOK) {
         user: (env.SMTP_USER || '').trim(),
         pass: env.SMTP_PASS || '',
         fromEmail: (env.SMTP_FROM_EMAIL || '').trim(),
-        fromName: (env.SMTP_FROM_NAME || 'Toplantı Takip').trim(),
+        fromName: (env.SMTP_FROM_NAME || 'Kurumsal Kalite Yönetim Sistemi').trim(),
       },
       raporAlici: (env.RAPOR_ALICI || '').trim(),
       hatirlatmaSaati: (env.HATIRLATMA_SAATI || '09:00').trim(),
