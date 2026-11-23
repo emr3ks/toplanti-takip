@@ -1,0 +1,80 @@
+<%- include('partials/ust', { aktifSayfa: 'emailler' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>E-posta Günlüğü</h1>
+    <p>Toplantı raporları, otomatik hatırlatmalar ve test e-postaları burada kayıt altına alınır.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/ayarlar">E-posta Ayarları</a>
+    <a class="btn btn-birincil" href="/ayarlar#test-eposta">Test E-postası Gönder</a>
+  </div>
+</div>
+
+<%- include('partials/bildirim') %>
+
+<% if (testModu) { %>
+  <div class="bilgi-kutu" style="margin-bottom:18px;border-color:#ddd6fe;background:#f5f3ff;color:#5b21b6;">
+    <strong>Test modu etkin.</strong> E-postalar gerçek alıcılara gönderilmez;
+    <span class="mono">data/outbox</span> klasörüne HTML dosyası olarak yazılır. İçerikleri bu sayfadaki “Görüntüle” bağlantısından açabilirsiniz.
+  </div>
+<% } %>
+
+<section class="kart">
+  <div class="kart-bas">
+    <div>
+      <h2>Kayıtlar</h2>
+      <p><%= kayitlar.length %> e-posta gösteriliyor (en yeni 150 kayıt).</p>
+    </div>
+  </div>
+
+  <% if (kayitlar.length) { %>
+    <div class="tablo-sarmal">
+      <table class="tablo">
+        <thead>
+          <tr>
+            <th>Zaman</th>
+            <th>Tür</th>
+            <th>Alıcı</th>
+            <th>Konu</th>
+            <th>Durum</th>
+            <th class="sag">İçerik</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% kayitlar.forEach(function (kayit) { %>
+            <tr>
+              <td style="white-space:nowrap;"><%= zamanTr(kayit.olusturma_tarihi) %></td>
+              <td><%= EPOSTA_TURLERI[kayit.tur] || kayit.tur %></td>
+              <td><%= kayit.alici || '—' %></td>
+              <td>
+                <%= kisaMetin(kayit.konu, 70) %>
+                <% if (kayit.hata) { %>
+                  <div class="metin-kucuk metin-kirmizi" title="<%= kayit.hata %>"><%= kisaMetin(kayit.hata, 70) %></div>
+                <% } %>
+              </td>
+              <td><span class="rozet rozet-<%= kayit.durum %>"><%= EPOSTA_DURUMLARI[kayit.durum] || kayit.durum %></span></td>
+              <td class="sag">
+                <a class="btn btn-kucuk btn-hayalet" href="/emailler/<%= kayit.id %>" target="_blank" rel="noopener">Görüntüle</a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <div class="bos">
+      <div class="bos-ikon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="3"></rect>
+          <path d="m22 7-10 6L2 7"></path>
+        </svg>
+      </div>
+      <h3>Henüz e-posta kaydı yok</h3>
+      <p>Bir toplantıyı tamamlayıp rapor gönderdiğinizde veya hatırlatma çalıştığında kayıtlar burada listelenir.</p>
+      <a class="btn btn-ikincil" href="/ayarlar">Test E-postası Gönder</a>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/alt') %>

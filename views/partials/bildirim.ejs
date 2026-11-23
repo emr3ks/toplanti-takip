@@ -1,0 +1,6 @@
+<% if (bildirim) { %>
+  <div class="bildirim bildirim-<%= bildirim.tur %>" role="status">
+    <span class="bildirim-ikon"><%= bildirim.tur === 'basari' ? '✓' : bildirim.tur === 'hata' ? '!' : 'i' %></span>
+    <div><%= bildirim.metin %></div>
+  </div>
+<% } %>

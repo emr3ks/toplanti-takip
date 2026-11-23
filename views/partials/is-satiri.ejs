@@ -1,0 +1,65 @@
+<%
+  const gecikti = Boolean(is.hedef_tarih) && is.hedef_tarih < bugunIso;
+  const duzenleYolu = `/isler/${is.id}/duzenle?donus=${encodeURIComponent(donus)}`;
+%>
+<article class="is-karti durum-<%= is.durum %>">
+  <span class="is-durum-cizgi" aria-hidden="true"></span>
+  <div class="is-govde">
+    <div class="is-ust">
+      <h3 class="is-baslik"><%= is.baslik %></h3>
+      <span class="rozet rozet-<%= is.durum %>"><%= durumEtiketi(is.durum) %></span>
+    </div>
+
+    <% if (is.not_metni) { %>
+      <p class="is-not"><%= is.not_metni %></p>
+    <% } %>
+
+    <div class="is-meta">
+      <span class="meta"><strong>Sorumlu</strong> <%= is.sorumlu_ad || 'Atanmadı' %></span>
+      <% if (toplantiGoster && is.toplanti_ad) { %>
+        <span class="meta"><strong>Toplantı</strong> <a href="/toplantilar/<%= is.toplanti_id %>"><%= is.toplanti_ad %></a></span>
+      <% } %>
+      <span class="meta <%= gecikti ? 'gecikti' : '' %>">
+        <strong>Hedef</strong>
+        <%= is.hedef_tarih ? tarihTr(is.hedef_tarih) : 'Belirtilmedi' %>
+        <% if (gecikti) { %> · Gecikti<% } %>
+      </span>
+      <% if (is.hatirlatma_gonderildi) { %>
+        <span class="cip" title="Bu iş için otomatik hatırlatma e-postası gönderildi.">Hatırlatma gönderildi</span>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="is-eylem">
+    <% if (is.durum === 'beklemede') { %>
+      <form method="post" action="/isler/<%= is.id %>/durum">
+        <input type="hidden" name="durum" value="aktif">
+        <input type="hidden" name="donus" value="<%= donus %>">
+        <button class="btn btn-kucuk btn-birincil" type="submit">Aktif Yap</button>
+      </form>
+    <% } %>
+
+    <% if (is.durum === 'aktif') { %>
+      <form method="post" action="/isler/<%= is.id %>/durum">
+        <input type="hidden" name="durum" value="beklemede">
+        <input type="hidden" name="donus" value="<%= donus %>">
+        <button class="btn btn-kucuk btn-ikincil" type="submit">Beklemeye Al</button>
+      </form>
+      <form method="post" action="/isler/<%= is.id %>/durum">
+        <input type="hidden" name="durum" value="tamamlandi">
+        <input type="hidden" name="donus" value="<%= donus %>">
+        <button class="btn btn-kucuk btn-basari" type="submit">Tamamla</button>
+      </form>
+    <% } %>
+
+    <% if (is.durum === 'tamamlandi') { %>
+      <form method="post" action="/isler/<%= is.id %>/durum">
+        <input type="hidden" name="durum" value="aktif">
+        <input type="hidden" name="donus" value="<%= donus %>">
+        <button class="btn btn-kucuk btn-ikincil" type="submit">Yeniden Aç</button>
+      </form>
+    <% } %>
+
+    <a class="btn btn-kucuk btn-hayalet" href="<%= duzenleYolu %>">Düzenle</a>
+  </div>
+</article>

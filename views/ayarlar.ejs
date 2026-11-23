@@ -1,0 +1,217 @@
+<%- include('partials/ust', { aktifSayfa: 'ayarlar' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Ayarlar</h1>
+    <p>SMTP bilgilerini, toplantı raporu alıcısını ve günlük hatırlatma zamanını yönetin.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/emailler">E-posta Günlüğü</a>
+  </div>
+</div>
+
+<%- include('partials/bildirim') %>
+
+<div class="iki-kolon">
+  <form class="kart" method="post" action="/ayarlar">
+    <div class="kart-bas">
+      <div>
+        <h2>E-posta ve Rapor Ayarları</h2>
+        <p>Değerler veritabanına kaydedilir; boş alanlar .env dosyasındaki değere düşer.</p>
+      </div>
+      <span class="rozet <%= form.mod === 'test' ? 'rozet-test' : 'rozet-gonderildi' %>">
+        <%= form.mod === 'test' ? 'Test modu' : 'SMTP' %>
+      </span>
+    </div>
+
+    <div class="ayar-bolum">
+      <h2>SMTP Sunucusu</h2>
+      <p>Gmail için <span class="mono">smtp.gmail.com</span>, port <span class="mono">587</span> ve uygulama şifresi kullanın.</p>
+      <div class="form-grid">
+        <div class="alan">
+          <label for="smtp-host">SMTP sunucu</label>
+          <input class="girdi" type="text" id="smtp-host" name="smtp_host" value="<%= form.smtpHost %>" placeholder="smtp.gmail.com">
+          <% if (form.kaynaklar.smtpHost === 'ortam') { %><span class="ipucu">Şu an .env dosyasından geliyor.</span><% } %>
+        </div>
+        <div class="alan">
+          <label for="smtp-port">Port</label>
+          <input class="girdi" type="number" id="smtp-port" name="smtp_port" value="<%= form.smtpPort %>" min="1" max="65535" placeholder="587">
+          <span class="ipucu">587 (STARTTLS) veya 465 (SSL).</span>
+        </div>
+        <div class="alan">
+          <label for="smtp-kullanici">Kullanıcı adı</label>
+          <input class="girdi" type="text" id="smtp-kullanici" name="smtp_user" value="<%= form.smtpUser %>" placeholder="ornek@gmail.com" autocomplete="username">
+        </div>
+        <div class="alan">
+          <label for="smtp-sifre">Şifre</label>
+          <input class="girdi" type="password" id="smtp-sifre" name="smtp_pass" value="" placeholder="<%= form.smtpPassVar ? 'Kayıtlı şifre korunuyor; değiştirmek için yeni şifre girin' : 'Gmail uygulama şifresi' %>" autocomplete="new-password">
+          <span class="ipucu">
+            <% if (form.smtpPassVar) { %>
+              Şifre tanımlı (<%= form.smtpPassKaynak === 'ortam' ? '.env' : 'arayüz' %>). Boş bırakırsanız korunur.
+            <% } else { %>
+              Henüz şifre tanımlanmadı. Test modunda şifre gerekmez.
+            <% } %>
+          </span>
+        </div>
+        <div class="alan">
+          <label for="smtp-gonderen-ad">Gönderen adı</label>
+          <input class="girdi" type="text" id="smtp-gonderen-ad" name="smtp_from_name" value="<%= form.smtpFromName %>" placeholder="Toplantı Takip">
+        </div>
+        <div class="alan">
+          <label for="smtp-gonderen-email">Gönderen e-posta</label>
+          <input class="girdi" type="email" id="smtp-gonderen-email" name="smtp_from_email" value="<%= form.smtpFromEmail %>" placeholder="ornek@gmail.com">
+          <span class="ipucu">Boş bırakılırsa kullanıcı adı kullanılır.</span>
+        </div>
+        <div class="alan tam">
+          <label class="onay-alani">
+            <input type="checkbox" name="smtp_secure" value="1" <%= form.smtpSecure ? 'checked' : '' %>>
+            <span>SSL/TLS kullan (genellikle 465 portu). 587 portu için işaretsiz bırakın.</span>
+          </label>
+        </div>
+        <div class="alan tam">
+          <label class="onay-alani">
+            <input type="checkbox" name="smtp_pass_sil" value="1">
+            <span>Kayıtlı SMTP şifresini sil (.env değeri varsa ona dönülür).</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ayirici"></div>
+
+    <div class="ayar-bolum">
+      <h2>Rapor ve Hatırlatma</h2>
+      <p>Toplantı sonu raporunun alıcısı ve günlük otomatik hatırlatma ayarları.</p>
+      <div class="form-grid">
+        <div class="alan tam">
+          <label for="rapor-alici">Toplantı sonu rapor alıcı e-postası</label>
+          <input class="girdi" type="email" id="rapor-alici" name="rapor_alici" value="<%= form.raporAlici %>" placeholder="raporlar@ornek.com">
+          <span class="ipucu">“Toplantıyı Tamamla ve Rapor Gönder” butonu bu adrese rapor yollar.</span>
+        </div>
+        <div class="alan">
+          <label for="hatirlatma-saati">Günlük hatırlatma saati</label>
+          <input class="girdi" type="text" id="hatirlatma-saati" name="hatirlatma_saati" value="<%= form.hatirlatmaSaati %>" placeholder="09:00" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" inputmode="numeric" title="SS:DD biçiminde girin (örn. 09:00)" required>
+          <span class="ipucu">SS:DD biçiminde; saat dilimine göre her gün bu saatte çalışır.</span>
+        </div>
+        <div class="alan">
+          <label for="saat-dilimi">Saat dilimi</label>
+          <select id="saat-dilimi" name="saat_dilimi">
+            <% const dilimler = form.saatDilimleri.includes(form.saatDilimi) ? form.saatDilimleri : [form.saatDilimi, ...form.saatDilimleri]; %>
+            <% dilimler.forEach(function (dilim) { %>
+              <option value="<%= dilim %>" <%= dilim === form.saatDilimi ? 'selected' : '' %>><%= dilim %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="alan tam">
+          <label class="onay-alani">
+            <input type="checkbox" name="test_modu" value="1" <%= form.testModu ? 'checked' : '' %>>
+            <span><strong>Test modu:</strong> E-postalar gönderilmez; <span class="mono">data/outbox</span> klasörüne ve E-posta Günlüğü sayfasına kaydedilir. SMTP tanımlı değilse test modu otomatik etkindir.</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-eylem">
+      <button class="btn btn-birincil" type="submit">Ayarları Kaydet</button>
+      <a class="btn btn-hayalet" href="/ayarlar">Sıfırla</a>
+    </div>
+  </form>
+
+  <div class="dikey">
+    <div class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Güncel Durum</h2>
+          <p>Kayıtlı ayarlara göre e-posta altyapısı.</p>
+        </div>
+      </div>
+      <div class="dikey">
+        <div class="bilgi-kutu">
+          <strong>Gönderim modu:</strong>
+          <%= form.mod === 'test' ? 'Test modu' : 'Gerçek SMTP' %>
+          <% if (form.mod === 'test') { %>
+            <br>E-postalar gönderilmez, <span class="mono">data/outbox</span> altına ve E-posta Günlüğü sayfasına kaydedilir.
+          <% } else { %>
+            <br><%= form.smtpHost %>:<%= form.smtpPort %> · SSL: <%= form.smtpSecure ? 'açık' : 'kapalı' %>
+          <% } %>
+        </div>
+        <div class="bilgi-kutu">
+          <strong>Rapor alıcısı:</strong> <%= form.raporAlici || 'Tanımlı değil' %><br>
+          <strong>Günlük hatırlatma:</strong> <%= form.hatirlatmaSaati %> (<%= form.saatDilimi %>)<br>
+          <strong>Cron ifadesi:</strong> <span class="mono"><%= cron || 'geçersiz' %></span>
+        </div>
+        <div class="bilgi-kutu">
+          Sunucu çalıştığı sürece zamanlayıcı aktiftir. Bilgisayar kapalıyken hatırlatma gönderilmez.
+        </div>
+      </div>
+    </div>
+
+    <div class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Bağlantı Testi</h2>
+          <p>Kaydedilmiş ayarlarla SMTP bağlantısını doğrulayın.</p>
+        </div>
+      </div>
+      <form method="post" action="/ayarlar/smtp-test">
+        <button class="btn btn-ikincil btn-blok" type="submit">SMTP Bağlantısını Test Et</button>
+      </form>
+      <p class="metin-kucuk metin-soluk" style="margin:10px 0 0;">Önce ayarları kaydedin; test kayıtlı değerleri kullanır.</p>
+    </div>
+
+    <div class="kart" id="test-eposta">
+      <div class="kart-bas">
+        <div>
+          <h2>Test E-postası</h2>
+          <p>Gönderim akışını hemen deneyin.</p>
+        </div>
+      </div>
+      <form method="post" action="/ayarlar/test-eposta" class="dikey">
+        <div class="alan">
+          <label for="test-alici">Alıcı</label>
+          <input class="girdi" type="email" id="test-alici" name="test_alici" value="<%= form.raporAlici || form.smtpUser %>" placeholder="ornek@ornek.com" required>
+        </div>
+        <button class="btn btn-birincil btn-blok" type="submit">Test E-postası Gönder</button>
+      </form>
+    </div>
+
+    <div class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Hatırlatmayı Elle Çalıştır</h2>
+          <p>Zamanlanmış görevi beklemeden kontrol edin.</p>
+        </div>
+      </div>
+      <form method="post" action="/ayarlar/hatirlatma-calistir" data-onay="Aktif ve hedef tarihi yaklaşan işler için hatırlatma e-postaları gönderilecek. Devam edilsin mi?">
+        <button class="btn btn-ikincil btn-blok" type="submit">Hatırlatmaları Şimdi Çalıştır</button>
+      </form>
+      <p class="metin-kucuk metin-soluk" style="margin:10px 0 0;">Aynı iş için daha önce hatırlatma gönderildiyse tekrar gönderilmez.</p>
+    </div>
+
+    <div class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Son E-postalar</h2>
+          <p>En son gönderilen veya kaydedilen 5 e-posta.</p>
+        </div>
+        <a class="btn btn-kucuk btn-hayalet" href="/emailler">Tümü</a>
+      </div>
+      <% if (sonEmailler.length) { %>
+        <% sonEmailler.forEach(function (kayit) { %>
+          <div class="sorumlu-satir" style="align-items:flex-start;">
+            <span class="rozet rozet-<%= kayit.durum %>"><%= EPOSTA_DURUMLARI[kayit.durum] || kayit.durum %></span>
+            <div class="sorumlu-bilgi">
+              <strong><%= kisaMetin(kayit.konu, 46) %></strong>
+              <span><%= kayit.alici %> · <%= zamanTr(kayit.olusturma_tarihi) %></span>
+            </div>
+            <a class="btn btn-kucuk btn-hayalet" href="/emailler/<%= kayit.id %>" target="_blank" rel="noopener">Aç</a>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <p class="metin-kucuk metin-soluk" style="margin:0;">Henüz e-posta kaydı yok.</p>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/alt') %>
