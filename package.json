@@ -1,0 +1,32 @@
+{
+  "name": "toplanti-takip",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Türkçe arayüzlü, SQLite tabanlı toplantı notları, iş takibi ve otomatik e-posta/hatırlatma uygulaması.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test --test-concurrency=1 test/app.test.js test/dates.test.js test/mailer.test.js test/reminder.test.js test/scheduler.test.js test/settings.test.js",
+    "demo": "node scripts/demo-verisi.js"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "keywords": [
+    "toplanti",
+    "gorev-takibi",
+    "sqlite",
+    "nodemailer",
+    "node-cron",
+    "turkce"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "ejs": "^7.0.2",
+    "express": "^5.3.0",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.6.1"
+  }
+}
