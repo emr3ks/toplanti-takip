@@ -8,6 +8,9 @@ const EPOSTA_DURUMLARI = Object.freeze({
 
 const EPOSTA_TURLERI = Object.freeze({
   test: 'Test E-postası',
+  dokuman_onay: 'Doküman onay bildirimi',
+  dokuman_yayin: 'Doküman yayın bildirimi',
+  egitim_hatirlatma: 'Eğitim hatırlatması',
 });
 
 module.exports = {

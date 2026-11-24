@@ -4,6 +4,7 @@ const { loadConfig } = require('./src/config');
 const { openDatabase } = require('./src/db');
 const { MailService } = require('./src/mailer');
 const { createApp } = require('./src/app');
+const { hatirlatmaZamanlayicisiBaslat } = require('./src/hatirlatmalar');
 const { etkinAyarlar, mailModu } = require('./src/settings');
 
 function main() {
@@ -14,6 +15,9 @@ function main() {
 
   const ayarlar = etkinAyarlar(db, config);
   const mod = mailModu(ayarlar);
+
+  // Yaklaşan eğitimler için katılımcılara periyodik hatırlatma e-postası.
+  const hatirlatici = hatirlatmaZamanlayicisiBaslat({ db, mail: mailService, config });
 
   const sunucu = app.listen(config.port, config.host, () => {
     console.log('');
@@ -38,6 +42,7 @@ function main() {
 
   function kapat(sinyal) {
     console.log(`\n${sinyal} alındı, kapatılıyor...`);
+    hatirlatici.durdur();
     sunucu.close(() => {
       try {
         db.close();

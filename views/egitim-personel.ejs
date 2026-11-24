@@ -1,0 +1,195 @@
+<%- include('partials/ust', { aktifSayfa: 'egitim-personel' }) %>
+
+<% if (mod === 'kisi') { %>
+
+  <div class="sayfa-bas egitim-sicil-bas">
+    <div class="egitim-sicil-kimlik">
+      <span class="avatar buyuk"><%= basHarfler(kisi.ad) %></span>
+      <div>
+        <h1><%= kisi.ad %></h1>
+        <p>
+          <%= rolEtiketi(kisi.rol) %>
+          · <%= kisi.departman_ad || 'Departman atanmamış' %>
+          · <%= kisi.email %>
+          <% if (!kisi.aktif) { %><span class="rozet rozet-iptal">Pasif hesap</span><% } %>
+        </p>
+      </div>
+    </div>
+    <div class="sayfa-eylem">
+      <button class="btn btn-hayalet" type="button" onclick="window.print()">Yazdır</button>
+      <% if (yonetici) { %>
+        <a class="btn btn-hayalet" href="/egitim/personel">Personel Listesine Dön</a>
+      <% } %>
+      <a class="btn btn-birincil" href="/egitim">Eğitim Planı</a>
+    </div>
+  </div>
+
+  <section class="istatistik-grid egitim-istatistik" aria-label="<%= kisi.ad %> eğitim özeti">
+    <div class="stat">
+      <span class="stat-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></span>
+      <span class="stat-icerik"><strong><%= ozet.toplam %></strong><span>Toplam eğitim</span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-ikon yesil"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+      <span class="stat-icerik"><strong><%= ozet.katildi %></strong><span>Katıldığı</span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-ikon kirmizi"><%- include('partials/ikon', { ad: 'zil' }) %></span>
+      <span class="stat-icerik"><strong><%= ozet.katilmadi %></strong><span>Katılmadığı</span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-ikon amber"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+      <span class="stat-icerik"><strong><%= ozet.sertifika %></strong><span>Sertifika</span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-ikon slate"><%- include('partials/ikon', { ad: 'egitim' }) %></span>
+      <span class="stat-icerik"><strong><%= ozet.ortalama || '—' %></strong><span>Ortalama puan</span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-ikon slate"><%- include('partials/ikon', { ad: 'dokuman' }) %></span>
+      <span class="stat-icerik"><strong><%= sonTarih ? tarihTr(sonTarih) : '—' %></strong><span>Son eğitim</span></span>
+    </div>
+  </section>
+
+  <div class="kart">
+    <div class="kart-bas">
+      <div>
+        <h2>Eğitim Geçmişi</h2>
+        <p>Katıldığı eğitimler, değerlendirme puanları ve sertifika kayıtları (iptal edilen eğitimler hariç).</p>
+      </div>
+      <span class="rozet rozet-acik"><%= kayitlar.length %> kayıt</span>
+    </div>
+
+    <% if (kayitlar.length) { %>
+      <div class="tablo-sarmal">
+        <table class="tablo egitim-sicil-tablo">
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th>Eğitim</th>
+              <th>Tür</th>
+              <th>Eğitmen</th>
+              <th>Süre</th>
+              <th>Katılım</th>
+              <th>Puan</th>
+              <th>Etkinlik</th>
+              <th>Sertifika</th>
+              <th>Not</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% kayitlar.forEach(function (kayit) { %>
+              <tr>
+                <td class="mono"><%= tarihTr(kayit.planlanan_tarih) %></td>
+                <td><a href="/egitim/<%= kayit.egitim_id %>"><strong><%= kayit.ad %></strong></a></td>
+                <td><span class="rozet egitim-tur-<%= kayit.tur %>"><%= EGITIM_TURLERI[kayit.tur] %></span></td>
+                <td><%= kayit.egitmen || '—' %></td>
+                <td><%= kayit.sure_saat %> saat</td>
+                <td><span class="rozet <%= katilimDurumuSinifi(kayit.katilim_durumu) %>"><%= EGITIM_KATILIM_DURUMLARI[kayit.katilim_durumu] %></span></td>
+                <td><%= kayit.degerlendirme_puani === null ? '—' : kayit.degerlendirme_puani %></td>
+                <td><span class="rozet <%= etkinlikDurumuSinifi(kayit.etkinlik_durumu) %>"><%= EGITIM_ETKINLIK_DURUMLARI[kayit.etkinlik_durumu] %></span></td>
+                <td><%= kayit.sertifika_no || '—' %></td>
+                <td class="metin-kucuk"><%= kayit.not_metni || '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="bos">
+        <div class="bos-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></div>
+        <h3>Henüz eğitim kaydı yok</h3>
+        <p><%= kisi.ad %> için tamamlanmış veya planlanmış bir eğitim kaydı bulunmuyor.</p>
+        <a class="btn btn-hayalet" href="/egitim">Eğitim Planına Git</a>
+      </div>
+    <% } %>
+  </div>
+
+<% } else { %>
+
+  <div class="sayfa-bas">
+    <div>
+      <h1>Personel Eğitim Sicili</h1>
+      <p>Personelin katıldığı eğitimleri, değerlendirme puanlarını ve sertifika kayıtlarını görüntüleyin.</p>
+    </div>
+    <div class="sayfa-eylem">
+      <a class="btn btn-hayalet" href="/egitim">Eğitim Planına Dön</a>
+      <% if (yetkiliMi('egitim')) { %><a class="btn btn-birincil" href="/egitim/yeni">+ Yeni Eğitim</a><% } %>
+    </div>
+  </div>
+
+  <div class="kart">
+    <div class="kart-bas">
+      <div>
+        <h2>Personel Listesi</h2>
+        <p>Aktif personelin eğitim özeti. Bir kişiye tıklayarak tüm eğitim geçmişini görüntüleyin.</p>
+      </div>
+      <span class="rozet rozet-acik"><%= kisiler.length %> aktif personel</span>
+    </div>
+
+    <form class="egitim-filtre" method="get" action="/egitim/personel">
+      <div class="alan egitim-filtre-arama">
+        <label for="personel-arama">Personel veya departman ara</label>
+        <input class="girdi" type="search" id="personel-arama" name="q" value="<%= arama %>" maxlength="100" placeholder="Örn. Ayşe Yıldız, Üretim…">
+      </div>
+      <div class="egitim-filtre-eylem">
+        <button class="btn btn-ikincil" type="submit">Ara</button>
+        <% if (arama) { %><a class="btn btn-hayalet" href="/egitim/personel">Temizle</a><% } %>
+      </div>
+    </form>
+
+    <% if (kisiler.length) { %>
+      <div class="tablo-sarmal">
+        <table class="tablo egitim-personel-tablo">
+          <thead>
+            <tr>
+              <th>Personel</th>
+              <th>Departman</th>
+              <th>Toplam Eğitim</th>
+              <th>Katıldığı</th>
+              <th>Katılmadığı</th>
+              <th>Sertifika</th>
+              <th>Ortalama Puan</th>
+              <th>Son Eğitim</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% kisiler.forEach(function (kisi) { %>
+              <tr>
+                <td>
+                  <div class="hucre-ad">
+                    <span class="avatar"><%= basHarfler(kisi.ad) %></span>
+                    <div>
+                      <strong><a href="/egitim/personel/<%= kisi.id %>"><%= kisi.ad %></a></strong>
+                      <span class="metin-kucuk metin-soluk" style="display:block;"><%= kisi.email %></span>
+                    </div>
+                  </div>
+                </td>
+                <td><%= kisi.departman_ad || '—' %></td>
+                <td><strong><%= kisi.toplam %></strong></td>
+                <td><span class="rozet rozet-aktif"><%= kisi.katildi %></span></td>
+                <td><span class="rozet <%= kisi.katilmadi ? 'rozet-iptal' : 'rozet-acik' %>"><%= kisi.katilmadi %></span></td>
+                <td><%= kisi.sertifika %></td>
+                <td><%= kisi.ortalama === null ? '—' : Number(kisi.ortalama).toFixed(1).replace('.', ',') %></td>
+                <td class="mono"><%= kisi.son_tarih ? tarihTr(kisi.son_tarih) : '—' %></td>
+                <td><a class="btn btn-kucuk btn-hayalet" href="/egitim/personel/<%= kisi.id %>">Sicil</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="metin-kucuk metin-soluk liste-alt-not"><%= kisiler.length %> personel listeleniyor.<% if (arama) { %> “<%= arama %>” aramasına göre.<% } %></p>
+    <% } else { %>
+      <div class="bos">
+        <div class="bos-ikon"><%- include('partials/ikon', { ad: 'organizasyon' }) %></div>
+        <h3>Personel bulunamadı</h3>
+        <p><%= arama ? 'Aramanıza uyan aktif personel yok.' : 'Sistemde aktif personel kaydı bulunmuyor.' %></p>
+        <a class="btn btn-hayalet" href="/egitim/personel">Listeyi Temizle</a>
+      </div>
+    <% } %>
+  </div>
+
+<% } %>
+
+<%- include('partials/alt') %>

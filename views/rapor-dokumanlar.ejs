@@ -1,0 +1,107 @@
+<%- include('partials/ust', { aktifSayfa: 'raporlar' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Güncel Doküman Ana Listesi</h1>
+    <p>Bu rapor yalnızca <strong>yayında</strong> durumundaki dokümanları listeler. Kod, tür, revizyon, yayın tarihi ve hedef departman bilgileriyle filtrelenebilir; seçili filtreler CSV ve Excel çıktısına taşınır.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/raporlar">← Raporlar</a>
+  </div>
+</div>
+
+<div class="sekmeler">
+  <a class="sekme <%= !tur ? 'aktif' : '' %>" href="<%= turAdresleri[''] %>">Tümü</a>
+  <% TUR_KODLARI.forEach(function (kod) { const t = DOKUMAN_TURLERI[kod]; %>
+    <a class="sekme <%= tur && tur.kod === kod ? 'aktif' : '' %>" href="<%= turAdresleri[kod] %>">
+      <span class="tur-nokta" style="background: <%= t.renk %>"></span><%= t.cogul %>
+    </a>
+  <% }) %>
+</div>
+
+<form class="rapor-filtre" method="get" action="/raporlar/dokumanlar">
+  <% if (tur) { %><input type="hidden" name="tur" value="<%= tur.kod %>"><% } %>
+  <div class="alan">
+    <label for="rapor-departman">Hedef departman</label>
+    <select id="rapor-departman" name="departman">
+      <option value="">Tüm departmanlar</option>
+      <% departmanlar.forEach(function (kayit) { %>
+        <option value="<%= kayit.id %>" <%= filtreler.departmanId === kayit.id ? 'selected' : '' %>><%= kayit.ad %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="alan rapor-filtre-arama">
+    <label for="rapor-arama">Kod veya başlık ara</label>
+    <input class="girdi" type="search" id="rapor-arama" name="q" value="<%= filtreler.arama %>" maxlength="100" placeholder="Örn. PR-001, kalite kayıtları…">
+  </div>
+  <div class="rapor-filtre-eylem">
+    <button class="btn btn-ikincil" type="submit">Filtrele</button>
+    <a class="btn btn-hayalet" href="<%= adresler.temiz %>">Temizle</a>
+  </div>
+</form>
+
+<div class="rapor-disa-aktar">
+  <span class="rapor-disa-aktar-etiket">Dışa Aktar</span>
+  <a class="btn btn-ikincil btn-kucuk" href="<%= adresler.csv %>">CSV indir</a>
+  <a class="btn btn-ikincil btn-kucuk" href="<%= adresler.xlsx %>">Excel indir</a>
+</div>
+
+<div class="rapor-filtre-ozet">
+  <span class="rapor-filtre-baslik">Aktif filtre:</span>
+  <% filtreOzeti.forEach(function (parca) { %><span class="cip"><%= parca %></span><% }) %>
+</div>
+
+<div class="kart">
+  <div class="kart-bas">
+    <div>
+      <h2>Yayındaki dokümanlar</h2>
+      <p>Tür koduna ve doküman koduna göre sıralanır.</p>
+    </div>
+    <span class="rozet rozet-acik"><%= dokumanlar.length %> doküman</span>
+  </div>
+
+  <% if (dokumanlar.length) { %>
+    <div class="tablo-sarmal">
+      <table class="tablo rapor-dokuman-tablo">
+        <thead>
+          <tr>
+            <th>Kod</th>
+            <th>Doküman</th>
+            <th>Tür</th>
+            <th>Revizyon</th>
+            <th>Yayın Tarihi</th>
+            <th>Hedef Departmanlar</th>
+            <th>Hazırlayan</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% dokumanlar.forEach(function (dokuman) { const turBilgisi = DOKUMAN_TURLERI[dokuman.tur_kod]; %>
+            <tr>
+              <td><span class="mono"><%= dokuman.kod %></span></td>
+              <td>
+                <a class="belge-baslik-link" href="/dokumanlar/<%= dokuman.id %>"><strong><%= dokuman.baslik %></strong></a>
+              </td>
+              <td>
+                <span class="rozet rozet-tur" style="--tur-renk: <%= turBilgisi ? turBilgisi.renk : '#4f46e5' %>"><%= dokuman.tur_ad %></span>
+              </td>
+              <td><span class="mono"><%= revizyonEtiketi(dokuman.revizyon) %></span></td>
+              <td class="metin-kucuk"><%= tarihTr(String(dokuman.yayin_tarihi || '').slice(0, 10)) %></td>
+              <td class="metin-kucuk"><%= dokuman.hedef_departmanlar || '—' %></td>
+              <td><%= dokuman.hazirlayan_ad || '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p class="metin-kucuk metin-soluk rapor-tablo-not"><%= dokumanlar.length %> yayındaki doküman listeleniyor.</p>
+  <% } else { %>
+    <div class="bos">
+      <div class="bos-ikon"><%- include('partials/ikon', { ad: 'dokuman' }) %></div>
+      <h3>Bu filtrelerde yayında doküman yok</h3>
+      <p>Seçili tür, departman veya arama ölçütüne uyan yayındaki doküman bulunamadı. Filtreleri temizleyip yeniden deneyin.</p>
+      <a class="btn btn-birincil" href="<%= adresler.temiz %>">Filtreleri Temizle</a>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/alt') %>

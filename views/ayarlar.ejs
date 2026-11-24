@@ -10,8 +10,6 @@
   </div>
 </div>
 
-<%- include('partials/bildirim') %>
-
 <section class="kart">
   <div class="kart-bas">
     <div>
@@ -29,13 +27,17 @@
       </div>
       <div class="alan">
         <label for="sirket-logo">Şirket logosu</label>
-        <input class="girdi dosya-girdi" type="file" id="sirket-logo" name="logo" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
-        <span class="ipucu">PNG, JPG veya WEBP · en fazla 10 MB. Yüklenmezse baş harfler kullanılır.</span>
+        <input class="girdi dosya-girdi" type="file" id="sirket-logo" name="logo" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
+        <span class="ipucu">PNG veya JPG · en fazla 10 MB. PDF antetinde sol üst logoda orantılı olarak basılır.</span>
       </div>
       <div class="alan tam logo-mevcut">
         <% if (sirket.logo) { %>
           <div class="logo-onizleme kucuk"><img src="/sirket-logo" alt="Şirket logosu"></div>
           <label class="onay-alani"><input type="checkbox" name="logo_sil" value="1"><span>Mevcut şirket logosunu kaldır</span></label>
+          <a class="btn btn-kucuk btn-hayalet" href="/ayarlar/logo-onizleme" target="_blank" rel="noopener">PDF Antet Önizlemesi</a>
+          <% if (logoUyari) { %>
+            <div class="bilgi-kutu" style="border-color:#f59e0b;background:#fffbeb;margin-top:10px;"><strong>Uyarı:</strong> <%= logoUyari %></div>
+          <% } %>
         <% } else { %>
           <span class="metin-kucuk metin-soluk">Henüz şirket logosu yüklenmedi.</span>
         <% } %>

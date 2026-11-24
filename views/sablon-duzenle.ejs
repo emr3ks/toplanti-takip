@@ -72,14 +72,17 @@
         <div class="logo-yukleme-form">
           <div class="alan">
             <label for="sablon-logo">Logo dosyası</label>
-            <input class="girdi dosya-girdi" type="file" id="sablon-logo" name="logo" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
-            <span class="ipucu">PNG, JPG veya WEBP · en fazla 10 MB.</span>
+            <input class="girdi dosya-girdi" type="file" id="sablon-logo" name="logo" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
+            <span class="ipucu">PNG veya JPG · en fazla 10 MB. PDF antetinde sol üst logoda orantılı olarak basılır.</span>
           </div>
           <% if (logoVar) { %>
             <label class="onay-alani">
               <input type="checkbox" name="logo_sil" value="1">
               <span>Şablona özel logoyu kaldır (şirket logosuna dön)</span>
             </label>
+          <% } %>
+          <% if (logoUyari) { %>
+            <div class="bilgi-kutu" style="border-color:#f59e0b;background:#fffbeb;"><strong>Uyarı:</strong> <%= logoUyari %></div>
           <% } %>
         </div>
       </div>
