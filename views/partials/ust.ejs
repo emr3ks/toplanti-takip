@@ -6,6 +6,8 @@
   <title><%= sayfaBaslik || 'Dashboard' %> · <%= sirket ? sirket.ad : 'Kalite Yönetim Sistemi' %></title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/egitim.css">
+  <link rel="stylesheet" href="/raporlar.css">
 </head>
 <body>
 <div class="uygulama">
@@ -18,7 +20,7 @@
       <% } %>
       <span class="marka-metin">
         <strong><%= sirket ? sirket.ad : 'Kalite Yönetim Sistemi' %></strong>
-        <small>Quality Management System · Faz 1 &amp; 2</small>
+        <small>Quality Management System · Faz 3</small>
       </span>
     </a>
 
@@ -68,9 +70,22 @@
         <a class="menu-link <%= aktifSayfa === 'egitim' ? 'aktif' : '' %>" href="/egitim">
           <span class="menu-ikon"><%- include('ikon', { ad: 'egitim' }) %></span>
           <span>Eğitim Yönetimi</span>
-          <span class="menu-rozet yakinda">Yakında</span>
+        </a>
+        <a class="menu-link <%= aktifSayfa === 'egitim-personel' ? 'aktif' : '' %>" href="/egitim/personel">
+          <span class="menu-ikon"><%- include('ikon', { ad: 'organizasyon' }) %></span>
+          <span>Personel Eğitim Sicili</span>
         </a>
       </div>
+
+      <% if (yetkiliMi('rapor')) { %>
+        <div class="menu-grup">
+          <span class="menu-baslik">Raporlar</span>
+          <a class="menu-link <%= aktifSayfa === 'raporlar' ? 'aktif' : '' %>" href="/raporlar">
+            <span class="menu-ikon"><%- include('ikon', { ad: 'dokuman' }) %></span>
+            <span>Kurumsal Raporlar</span>
+          </a>
+        </div>
+      <% } %>
 
       <div class="menu-grup">
         <span class="menu-baslik">Kurumsal</span>

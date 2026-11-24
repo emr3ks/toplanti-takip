@@ -142,6 +142,44 @@ CREATE TABLE IF NOT EXISTS bildirimler (
   olusturma_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 CREATE INDEX IF NOT EXISTS idx_bildirimler_kullanici ON bildirimler (kullanici_id, okundu);
+
+-- ---------------------------------------------------------------------------
+-- Eğitim Yönetimi
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS egitimler (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ad TEXT NOT NULL,
+  tur TEXT NOT NULL DEFAULT 'ic' CHECK (tur IN ('ic', 'dis')),
+  egitmen TEXT NOT NULL DEFAULT '',
+  planlanan_tarih TEXT NOT NULL,
+  sure_saat REAL NOT NULL DEFAULT 1 CHECK (sure_saat > 0),
+  dokuman_id INTEGER REFERENCES dokumanlar (id) ON DELETE SET NULL,
+  aciklama TEXT NOT NULL DEFAULT '',
+  durum TEXT NOT NULL DEFAULT 'planlandi'
+    CHECK (durum IN ('planlandi', 'tamamlandi', 'iptal')),
+  olusturan_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  olusturma_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  guncelleme_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS idx_egitimler_tarih ON egitimler (planlanan_tarih);
+
+CREATE TABLE IF NOT EXISTS egitim_katilimcilari (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  egitim_id INTEGER NOT NULL REFERENCES egitimler (id) ON DELETE CASCADE,
+  kullanici_id INTEGER NOT NULL REFERENCES kullanicilar (id) ON DELETE CASCADE,
+  katilim_durumu TEXT NOT NULL DEFAULT 'bekliyor'
+    CHECK (katilim_durumu IN ('bekliyor', 'katildi', 'katilmadi')),
+  degerlendirme_puani REAL CHECK (degerlendirme_puani IS NULL OR (degerlendirme_puani >= 0 AND degerlendirme_puani <= 100)),
+  etkinlik_durumu TEXT NOT NULL DEFAULT 'bekliyor'
+    CHECK (etkinlik_durumu IN ('bekliyor', 'etkin', 'etkin_degil')),
+  sertifika_no TEXT NOT NULL DEFAULT '',
+  not_metni TEXT NOT NULL DEFAULT '',
+  hatirlatma_tarihi TEXT,
+  olusturma_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  UNIQUE (egitim_id, kullanici_id)
+);
+CREATE INDEX IF NOT EXISTS idx_egitim_katilimcilari_kullanici ON egitim_katilimcilari (kullanici_id);
+CREATE INDEX IF NOT EXISTS idx_egitim_katilimcilari_egitim ON egitim_katilimcilari (egitim_id);
 `;
 
 function openDatabase(dbYolu) {
@@ -151,7 +189,7 @@ function openDatabase(dbYolu) {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec('PRAGMA busy_timeout = 5000;');
   db.exec(SEMA);
-  db.exec('PRAGMA user_version = 3;');
+  db.exec('PRAGMA user_version = 4;');
   varsayilanVerileriYukle(db);
   return db;
 }

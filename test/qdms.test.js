@@ -188,6 +188,14 @@ test('doküman onaya gönderilir, onaylanır ve filigran kalkar', async () => {
     .get(doc.id).sayi;
   assert.ok(bekleyen >= 1);
 
+  const onayEposta = db()
+    .prepare("SELECT * FROM email_kayitlari WHERE tur = 'dokuman_onay' ORDER BY id")
+    .all();
+  assert.ok(
+    onayEposta.some((kayit) => kayit.alici === 'onaylayan@ornek.com' && kayit.durum === 'test_modu'),
+    'onaya gönderim onaylayana e-posta kaydı oluşturmalı'
+  );
+
   const onayla = await formPost(sunucu.base, `/dokumanlar/${doc.id}/onayla`, {});
   assert.equal(onayla.durum, 303);
   assert.match(konumMesaji(onayla.konum), /yayınlandı/);
@@ -206,6 +214,16 @@ test('doküman onaya gönderilir, onaylanır ve filigran kalkar', async () => {
     .map((satir) => satir.email)
     .sort();
   assert.deepEqual(okuyucular, ['hazirlayan@ornek.com', 'saha@ornek.com']);
+
+  const yayinEposta = [
+    ...new Set(
+      db()
+        .prepare("SELECT alici FROM email_kayitlari WHERE tur = 'dokuman_yayin' ORDER BY id")
+        .all()
+        .map((satir) => satir.alici)
+    ),
+  ].sort();
+  assert.deepEqual(yayinEposta, ['hazirlayan@ornek.com', 'saha@ornek.com']);
 
   const yayinPdf = await fetch(`${sunucu.base}/dokumanlar/${doc.id}/pdf`, {
     headers: { cookie: cerezAl(sunucu.base) },
@@ -408,6 +426,34 @@ test('şirket adı ve logosu kaydedilir; PDF ve arayüzde kullanılır', async (
 
   const ana = await sayfaAl(sunucu.base, '/');
   assert.match(ana.metin, /Örnek Sanayi A\.Ş\./);
+});
+
+test('WEBP logo yüklemesi reddedilir ve mevcut logo korunur', async () => {
+  const onceki = db().prepare("SELECT deger FROM ayarlar WHERE anahtar = 'sirket_logo'").get();
+  assert.ok(onceki && onceki.deger, 'önceki testte PNG logo kaydedilmiş olmalı');
+
+  const form = new FormData();
+  form.set('sirket_adi', 'Örnek Sanayi A.Ş.');
+  form.set('logo', new Blob([Buffer.from('RIFF0000WEBPgecersiz')], { type: 'image/webp' }), 'logo.webp');
+  const kaydet = await fetch(`${sunucu.base}/ayarlar/sirket`, {
+    method: 'POST',
+    headers: { cookie: cerezAl(sunucu.base) },
+    body: form,
+    redirect: 'manual',
+  });
+  assert.equal(kaydet.status, 303);
+  assert.match(konumMesaji(kaydet.headers.get('location')), /yalnızca PNG veya JPG/i);
+
+  const sonraki = db().prepare("SELECT deger FROM ayarlar WHERE anahtar = 'sirket_logo'").get();
+  assert.equal(sonraki.deger, onceki.deger, 'geçersiz yükleme mevcut logoyu değiştirmemeli');
+
+  const onizleme = await fetch(`${sunucu.base}/ayarlar/logo-onizleme`, {
+    headers: { cookie: cerezAl(sunucu.base) },
+  });
+  const pdf = Buffer.from(await onizleme.arrayBuffer());
+  assert.equal(onizleme.status, 200);
+  assert.equal(pdf.slice(0, 5).toString(), '%PDF-');
+  assert.match(pdf.toString('latin1'), /\/Subtype\s*\/Image/);
 });
 
 test('hazır PDF yüklenebilir ve indirilebilir', async () => {

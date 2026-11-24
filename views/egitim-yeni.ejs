@@ -1,0 +1,146 @@
+<%- include('partials/ust', { aktifSayfa: 'egitim' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Yeni Eğitim</h1>
+    <p>Eğitim bilgilerini girin, ilgili dokümanı seçin ve katılımcıları departman ya da kişi bazında belirleyin.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/egitim">Eğitim Planına Dön</a>
+  </div>
+</div>
+
+<form method="post" action="/egitim/yeni" class="egitim-form">
+  <section class="kart">
+    <div class="kart-bas">
+      <div>
+        <h2>Eğitim Bilgileri</h2>
+        <p>Zorunlu alanlar eğitim adı, tür, planlanan tarih ve süredir.</p>
+      </div>
+      <span class="rozet rozet-beklemede">Planlandı olarak açılır</span>
+    </div>
+
+    <div class="form-grid">
+      <div class="alan tam">
+        <label for="egitim-ad">Eğitim adı <span class="zorunlu-yazi">*</span></label>
+        <input class="girdi" type="text" id="egitim-ad" name="ad" value="<%= form.ad %>" minlength="3" maxlength="160" required placeholder="Örn. ISO 9001 Kalite Yönetim Sistemi Farkındalık Eğitimi">
+        <span class="ipucu">3-160 karakter arasında olmalıdır.</span>
+      </div>
+
+      <div class="alan">
+        <label for="egitim-tur">Eğitim türü <span class="zorunlu-yazi">*</span></label>
+        <select id="egitim-tur" name="tur" required>
+          <% Object.keys(EGITIM_TURLERI).forEach(function (anahtar) { %>
+            <option value="<%= anahtar %>" <%= form.tur === anahtar ? 'selected' : '' %>><%= EGITIM_TURLERI[anahtar] %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="alan">
+        <label for="egitim-egitmen">Eğitmen</label>
+        <input class="girdi" type="text" id="egitim-egitmen" name="egitmen" value="<%= form.egitmen %>" maxlength="120" placeholder="Örn. Ayşe Yıldız veya dış eğitim kurumu">
+        <span class="ipucu">İsteğe bağlı, en fazla 120 karakter.</span>
+      </div>
+
+      <div class="alan">
+        <label for="egitim-tarih">Planlanan tarih <span class="zorunlu-yazi">*</span></label>
+        <input class="girdi" type="date" id="egitim-tarih" name="planlanan_tarih" value="<%= form.planlanan_tarih %>" required>
+      </div>
+
+      <div class="alan">
+        <label for="egitim-sure">Süre (saat) <span class="zorunlu-yazi">*</span></label>
+        <input class="girdi" type="number" id="egitim-sure" name="sure_saat" value="<%= form.sure_saat %>" min="0.5" max="100" step="0.5" required>
+        <span class="ipucu">0,5 ile 100 saat arasında, yarım saatlik adımlarla.</span>
+      </div>
+
+      <div class="alan">
+        <label for="egitim-dokuman">İlgili doküman</label>
+        <select id="egitim-dokuman" name="dokuman_id">
+          <option value="">— Doküman seçilmedi —</option>
+          <% dokumanlar.forEach(function (dokuman) { %>
+            <option value="<%= dokuman.id %>" <%= String(form.dokuman_id) === String(dokuman.id) ? 'selected' : '' %>>
+              <%= dokuman.kod %> · <%= dokuman.baslik %> (<%= revizyonEtiketi(dokuman.revizyon) %>)
+            </option>
+          <% }) %>
+        </select>
+        <span class="ipucu">Yalnızca yayında olan dokümanlar listelenir.</span>
+      </div>
+
+      <div class="alan tam">
+        <label for="egitim-aciklama">Açıklama</label>
+        <textarea id="egitim-aciklama" name="aciklama" maxlength="1000" rows="4" placeholder="Eğitimin amacı, kapsamı ve içeriği hakkında kısa bilgi…"><%= form.aciklama %></textarea>
+        <span class="ipucu">En fazla 1000 karakter.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="kart" id="katilimcilar">
+    <div class="kart-bas">
+      <div>
+        <h2>Katılımcılar <span class="zorunlu-yazi">*</span></h2>
+        <p>Departman seçtiğinizde o birimdeki tüm aktif personel eklenir. Ayrıca tek tek kişi de seçebilirsiniz.</p>
+      </div>
+      <span class="rozet rozet-acik"><%= gruplar.reduce(function (toplam, grup) { return toplam + grup.kullanici_sayisi; }, 0) + departmansiz.length %> aktif personel</span>
+    </div>
+
+    <div class="egitim-secim-bilgi">
+      <span class="bilgi-kutu">Aynı kişi hem departman hem kişi seçiminden gelse bile yalnızca bir kez eklenir.</span>
+    </div>
+
+    <div class="egitim-secim-grid">
+      <% gruplar.forEach(function (grup) { %>
+        <div class="egitim-secim-kart">
+          <label class="egitim-secim-departman onay-alani">
+            <input type="checkbox" name="departmanlar" value="<%= grup.id %>" <%= grup.kullanici_sayisi ? '' : 'disabled' %>>
+            <span>
+              <strong><%= grup.ad %></strong>
+              <small><%= grup.kullanici_sayisi %> aktif personel<%= grup.kullanici_sayisi ? ' · departmanın tamamını ekler' : ' · aktif personel yok' %></small>
+            </span>
+          </label>
+          <div class="egitim-kisi-listesi">
+            <% grup.kullanicilar.forEach(function (kisi) { %>
+              <label class="egitim-kisi">
+                <input type="checkbox" name="kullanicilar" value="<%= kisi.id %>">
+                <span class="avatar"><%= basHarfler(kisi.ad) %></span>
+                <span class="egitim-kisi-bilgi">
+                  <strong><%= kisi.ad %></strong>
+                  <small><%= kisi.email %></small>
+                </span>
+              </label>
+            <% }) %>
+            <% if (!grup.kullanicilar.length) { %>
+              <p class="metin-kucuk metin-soluk egitim-kisi-yok">Bu departmanda aktif personel yok.</p>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+
+      <% if (departmansiz.length) { %>
+        <div class="egitim-secim-kart">
+          <div class="egitim-secim-departman egitim-secim-departmansiz">
+            <span><strong>Departmansız</strong><small><%= departmansiz.length %> aktif personel</small></span>
+          </div>
+          <div class="egitim-kisi-listesi">
+            <% departmansiz.forEach(function (kisi) { %>
+              <label class="egitim-kisi">
+                <input type="checkbox" name="kullanicilar" value="<%= kisi.id %>">
+                <span class="avatar"><%= basHarfler(kisi.ad) %></span>
+                <span class="egitim-kisi-bilgi">
+                  <strong><%= kisi.ad %></strong>
+                  <small><%= kisi.email %></small>
+                </span>
+              </label>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </section>
+
+  <div class="egitim-form-eylem form-eylem">
+    <button class="btn btn-birincil" type="submit">Eğitimi Oluştur</button>
+    <a class="btn btn-hayalet" href="/egitim">Vazgeç</a>
+  </div>
+</form>
+
+<%- include('partials/alt') %>

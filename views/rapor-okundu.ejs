@@ -1,0 +1,232 @@
+<%- include('partials/ust', { aktifSayfa: 'raporlar' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Okundu Onayı Matrisi</h1>
+    <p>Bu rapor yayındaki dokümanların personel tarafından okunup onaylanma durumunu gösterir. Matris görünümü kişi × doküman tablosu sunar; liste görünümü her okuma kaydını ayrıntılı olarak gösterir.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/raporlar">← Raporlar</a>
+  </div>
+</div>
+
+<section class="istatistik-grid" aria-label="Okundu onayı özeti">
+  <div class="stat">
+    <span class="stat-ikon slate"><%- include('partials/ikon', { ad: 'dokuman' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= rapor.ozet.toplam %></strong>
+      <span>Toplam kayıt</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon yesil"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= rapor.ozet.okunan %></strong>
+      <span>Okunan</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon amber"><%- include('partials/ikon', { ad: 'zil' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= rapor.ozet.bekleyen %></strong>
+      <span>Bekleyen</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= raporYuzde(rapor.ozet.oran) %></strong>
+      <span>Okunma yüzdesi</span>
+    </span>
+  </div>
+</section>
+
+<div class="sekmeler">
+  <a class="sekme <%= gorunum === 'matris' ? 'aktif' : '' %>" href="<%= adresler.matris %>">Matris</a>
+  <a class="sekme <%= gorunum === 'liste' ? 'aktif' : '' %>" href="<%= adresler.liste %>">Liste</a>
+</div>
+
+<form class="rapor-filtre" method="get" action="/raporlar/okundu-onayi">
+  <input type="hidden" name="gorunum" value="<%= gorunum %>">
+  <div class="alan">
+    <label for="okundu-dokuman">Doküman</label>
+    <select id="okundu-dokuman" name="dokuman">
+      <option value="">Tüm yayındaki dokümanlar</option>
+      <% rapor.tumDokumanlar.forEach(function (dokuman) { %>
+        <option value="<%= dokuman.id %>" <%= rapor.filtreler.dokuman === dokuman.id ? 'selected' : '' %>><%= dokuman.kod %> · <%= dokuman.baslik %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="alan">
+    <label for="okundu-departman">Departman</label>
+    <select id="okundu-departman" name="departman">
+      <option value="">Tüm departmanlar</option>
+      <% rapor.departmanlar.forEach(function (departman) { %>
+        <option value="<%= departman.id %>" <%= rapor.filtreler.departman === departman.id ? 'selected' : '' %>><%= departman.ad %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="alan">
+    <label for="okundu-durum">Durum</label>
+    <select id="okundu-durum" name="durum">
+      <option value="hepsi" <%= rapor.filtreler.durum === 'hepsi' ? 'selected' : '' %>>Hepsi</option>
+      <option value="okundu" <%= rapor.filtreler.durum === 'okundu' ? 'selected' : '' %>>Okudu</option>
+      <option value="bekliyor" <%= rapor.filtreler.durum === 'bekliyor' ? 'selected' : '' %>>Bekliyor</option>
+    </select>
+  </div>
+  <div class="alan rapor-filtre-arama">
+    <label for="okundu-arama">Personel ara</label>
+    <input class="girdi" type="search" id="okundu-arama" name="q" value="<%= rapor.filtreler.arama %>" maxlength="100" placeholder="Ad soyad…">
+  </div>
+  <div class="rapor-filtre-eylem">
+    <button class="btn btn-ikincil" type="submit">Filtrele</button>
+    <a class="btn btn-hayalet" href="<%= adresler.temiz %>">Temizle</a>
+  </div>
+</form>
+
+<div class="rapor-disa-aktar">
+  <span class="rapor-disa-aktar-etiket">Dışa Aktar</span>
+  <a class="btn btn-ikincil btn-kucuk" href="<%= adresler.listeCsv %>">Liste CSV</a>
+  <a class="btn btn-ikincil btn-kucuk" href="<%= adresler.listeXlsx %>">Liste Excel</a>
+  <a class="btn btn-hayalet btn-kucuk" href="<%= adresler.matrisCsv %>">Matris CSV</a>
+  <a class="btn btn-hayalet btn-kucuk" href="<%= adresler.matrisXlsx %>">Matris Excel</a>
+</div>
+
+<div class="rapor-filtre-ozet">
+  <span class="rapor-filtre-baslik">Aktif filtre:</span>
+  <% filtreOzeti.forEach(function (parca) { %><span class="cip"><%= parca %></span><% }) %>
+</div>
+
+<% if (gorunum === 'matris') { %>
+  <div class="kart">
+    <div class="kart-bas">
+      <div>
+        <h2>Okundu onayı matrisi</h2>
+        <p>✓ okundu, • bekliyor, boş hücre ise bu dokümanın ilgili personele atanmadığını gösterir. Hücre üzerine gelindiğinde okunma tarihi görünür.</p>
+      </div>
+      <span class="rozet rozet-acik"><%= rapor.matris ? rapor.matris.satirlar.length : 0 %> personel · <%= rapor.matris ? rapor.matris.dokumanlar.length : 0 %> doküman</span>
+    </div>
+
+    <% if (!rapor.tumDokumanlar.length) { %>
+      <div class="bos">
+        <div class="bos-ikon"><%- include('partials/ikon', { ad: 'dokuman' }) %></div>
+        <h3>Yayında doküman yok</h3>
+        <p>Okundu onayı matrisi için önce en az bir dokümanın yayınlanması gerekir.</p>
+        <a class="btn btn-birincil" href="/dokumanlar">Doküman Yönetimi</a>
+      </div>
+    <% } else if (!rapor.matris || !rapor.matris.satirlar.length) { %>
+      <div class="bos">
+        <div class="bos-ikon"><%- include('partials/ikon', { ad: 'onay' }) %></div>
+        <h3>Filtrelere uyan okuma kaydı bulunamadı</h3>
+        <p>Seçili doküman, departman veya durum için aktif personel okuma kaydı yok. Filtreleri temizleyip yeniden deneyin.</p>
+        <a class="btn btn-birincil" href="<%= adresler.temiz %>">Filtreleri Temizle</a>
+      </div>
+    <% } else { %>
+      <div class="tablo-sarmal rapor-matris-sarmal">
+        <table class="tablo rapor-matris">
+          <thead>
+            <tr>
+              <th>Personel</th>
+              <th>Departman</th>
+              <% rapor.matris.dokumanlar.forEach(function (dokuman) { %>
+                <th class="rapor-matris-dokuman" title="<%= dokuman.baslik %>">
+                  <span class="mono"><%= dokuman.kod %></span>
+                  <span class="rapor-matris-alt"><%= dokuman.baslik %></span>
+                </th>
+              <% }) %>
+              <th class="rapor-matris-toplam">Okunan / Toplam</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% rapor.matris.satirlar.forEach(function (kisi) { %>
+              <tr>
+                <td>
+                  <div class="rapor-kisi">
+                    <strong><%= kisi.ad %></strong>
+                  </div>
+                </td>
+                <td class="metin-kucuk metin-soluk"><%= kisi.departman_ad || '—' %></td>
+                <% rapor.matris.dokumanlar.forEach(function (dokuman) { const hucre = kisi.hucreler[dokuman.id]; %>
+                  <td>
+                    <% if (!hucre) { %>
+                      <span class="rapor-hucre-bos"></span>
+                    <% } else if (hucre.okundu) { %>
+                      <span class="rapor-hucre rapor-hucre-ok" title="Okundu · <%= zamanTr(hucre.okunma_tarihi) %>">✓</span>
+                    <% } else { %>
+                      <span class="rapor-hucre rapor-hucre-bekliyor" title="Bekliyor">•</span>
+                    <% } %>
+                  </td>
+                <% }) %>
+                <td class="rapor-matris-toplam"><%= kisi.okunan %>/<%= kisi.toplam %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="metin-kucuk metin-soluk rapor-tablo-not">
+        <%= rapor.matris.dokumanlar.length %> doküman sütunu gösteriliyor; tablo yatay olarak kaydırılabilir.
+      </p>
+    <% } %>
+  </div>
+<% } else { %>
+  <div class="kart">
+    <div class="kart-bas">
+      <div>
+        <h2>Okuma kayıtları</h2>
+        <p>Personel, doküman ve okuma durumuna göre ayrıntılı liste.</p>
+      </div>
+      <span class="rozet rozet-acik"><%= rapor.liste.length %> kayıt</span>
+    </div>
+
+    <% if (rapor.liste.length) { %>
+      <div class="tablo-sarmal">
+        <table class="tablo">
+          <thead>
+            <tr>
+              <th>Personel</th>
+              <th>Departman</th>
+              <th>Doküman Kodu</th>
+              <th>Doküman</th>
+              <th>Revizyon</th>
+              <th>Durum</th>
+              <th>Okunma Tarihi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% rapor.liste.forEach(function (kayit) { %>
+              <tr>
+                <td><strong><%= kayit.personel %></strong></td>
+                <td class="metin-kucuk"><%= kayit.departman_ad || '—' %></td>
+                <td><span class="mono"><%= kayit.dokuman_kod %></span></td>
+                <td>
+                  <a class="belge-baslik-link" href="/dokumanlar/<%= kayit.dokuman_id %>"><%= kayit.dokuman_baslik %></a>
+                </td>
+                <td><span class="mono"><%= revizyonEtiketi(kayit.revizyon) %></span></td>
+                <td>
+                  <% if (Number(kayit.okundu) === 1) { %>
+                    <span class="rozet rozet-aktif">Okudu</span>
+                  <% } else { %>
+                    <span class="rozet rozet-beklemede">Bekliyor</span>
+                  <% } %>
+                </td>
+                <td class="metin-kucuk">
+                  <%= Number(kayit.okundu) === 1 && kayit.okunma_tarihi ? zamanTr(kayit.okunma_tarihi) : '—' %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="metin-kucuk metin-soluk rapor-tablo-not"><%= rapor.liste.length %> okuma kaydı listeleniyor.</p>
+    <% } else { %>
+      <div class="bos">
+        <div class="bos-ikon"><%- include('partials/ikon', { ad: 'onay' }) %></div>
+        <h3>Filtrelere uyan kayıt yok</h3>
+        <p>Seçili doküman, departman, durum veya personel aramasına uyan okuma kaydı bulunamadı.</p>
+        <a class="btn btn-birincil" href="<%= adresler.temiz %>">Filtreleri Temizle</a>
+      </div>
+    <% } %>
+  </div>
+<% } %>
+
+<%- include('partials/alt') %>

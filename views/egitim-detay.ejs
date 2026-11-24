@@ -1,0 +1,326 @@
+<%- include('partials/ust', { aktifSayfa: 'egitim' }) %>
+
+<div class="sayfa-bas egitim-detay-bas">
+  <div>
+    <div class="egitim-detay-ust">
+      <span class="rozet egitim-tur-<%= egitim.tur %>"><%= EGITIM_TURLERI[egitim.tur] %></span>
+      <span class="rozet <%= egitimDurumSinifi(egitim.durum) %>"><%= EGITIM_DURUMLARI[egitim.durum] %></span>
+      <span class="mono metin-soluk">Eğitim #<%= egitim.id %></span>
+    </div>
+    <h1><%= egitim.ad %></h1>
+    <p>
+      <%= tarihTr(egitim.planlanan_tarih) %>
+      · <%= egitim.sure_saat %> saat
+      · <%= egitim.egitmen || 'Eğitmen belirtilmedi' %>
+      <% if (egitim.olusturan_ad) { %> · <%= egitim.olusturan_ad %> tarafından oluşturuldu<% } %>
+    </p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/egitim">Eğitim Planına Dön</a>
+    <a class="btn btn-hayalet" href="/egitim/personel">Personel Sicili</a>
+  </div>
+</div>
+
+<div class="iki-kolon egitim-detay-kolonlar">
+  <div class="dikey">
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Eğitim Bilgileri</h2><p>Planlanan eğitimin temel bilgileri ve ilgili kayıtlar.</p></div>
+        <span class="rozet <%= egitimDurumSinifi(egitim.durum) %>"><%= EGITIM_DURUMLARI[egitim.durum] %></span>
+      </div>
+      <dl class="tanim-listesi egitim-tanim-listesi">
+        <dt>Tür</dt><dd><span class="rozet egitim-tur-<%= egitim.tur %>"><%= EGITIM_TURLERI[egitim.tur] %></span></dd>
+        <dt>Planlanan tarih</dt><dd><%= tarihTr(egitim.planlanan_tarih) %></dd>
+        <dt>Süre</dt><dd><%= egitim.sure_saat %> saat</dd>
+        <dt>Eğitmen</dt><dd><%= egitim.egitmen || '—' %></dd>
+        <dt>İlgili doküman</dt>
+        <dd>
+          <% if (egitim.dokuman_kod) { %>
+            <a href="/dokumanlar/<%= egitim.dokuman_id %>"><span class="mono"><%= egitim.dokuman_kod %></span> · <%= egitim.dokuman_baslik %></a>
+          <% } else { %>
+            <span class="metin-soluk">—</span>
+          <% } %>
+        </dd>
+        <dt>Oluşturan</dt><dd><%= egitim.olusturan_ad || '—' %></dd>
+        <dt>Oluşturma</dt><dd><%= zamanTr(egitim.olusturma_tarihi) %></dd>
+        <dt>Son güncelleme</dt><dd><%= zamanTr(egitim.guncelleme_tarihi) %></dd>
+        <dt>Son hatırlatma</dt>
+        <dd><%= sonHatirlatma ? zamanTr(sonHatirlatma) : 'Henüz gönderilmedi' %></dd>
+      </dl>
+      <% if (egitim.aciklama) { %>
+        <div class="egitim-aciklama">
+          <strong>Açıklama</strong>
+          <p><%= egitim.aciklama %></p>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Katılımcılar ve Sonuçlar</h2>
+          <p><%= yonetici ? 'Katılım durumu, puan, etkinlik ve sertifika bilgilerini tek formda güncelleyin.' : 'Eğitime atanan personel ve kaydedilmiş sonuçlar.' %></p>
+        </div>
+        <span class="rozet rozet-acik"><%= ozet.toplam %> katılımcı</span>
+      </div>
+
+      <div class="egitim-ozet-grid" aria-label="Katılım özeti">
+        <div><strong><%= ozet.toplam %></strong><span>Toplam</span></div>
+        <div><strong><%= ozet.katildi %></strong><span>Katıldı</span></div>
+        <div><strong><%= ozet.katilmadi %></strong><span>Katılmadı</span></div>
+        <div><strong><%= ozet.bekliyor %></strong><span>Bekliyor</span></div>
+        <div><strong><%= ozet.katilimOrani === null ? '—' : ozet.katilimOrani + '%' %></strong><span>Katılım oranı</span></div>
+        <div><strong><%= ozet.ortalama || '—' %></strong><span>Ortalama puan</span></div>
+        <div><strong><%= ozet.etkinlikOrani === null ? '—' : ozet.etkinlikOrani + '%' %></strong><span>Etkinlik oranı</span></div>
+        <div><strong><%= ozet.sertifika %></strong><span>Sertifika</span></div>
+      </div>
+
+      <% if (katilimcilar.length) { %>
+        <% if (yonetici) { %>
+          <form method="post" action="/egitim/<%= egitim.id %>/sonuclar" class="egitim-sonuc-form">
+            <div class="tablo-sarmal">
+              <table class="tablo egitim-katilimci-tablo">
+                <thead>
+                  <tr>
+                    <th>Personel</th>
+                    <th>Departman</th>
+                    <th>Katılım</th>
+                    <th>Puan (0-100)</th>
+                    <th>Etkinlik</th>
+                    <th>Sertifika No</th>
+                    <th>Not</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% katilimcilar.forEach(function (kisi) { %>
+                    <tr>
+                      <td>
+                        <input type="hidden" name="katilimci_id" value="<%= kisi.id %>">
+                        <div class="hucre-ad">
+                          <span class="avatar"><%= basHarfler(kisi.ad) %></span>
+                          <div>
+                            <strong><a href="/egitim/personel/<%= kisi.kullanici_id %>"><%= kisi.ad %></a></strong>
+                            <span class="metin-kucuk metin-soluk" style="display:block;"><%= kisi.email %></span>
+                          </div>
+                        </div>
+                      </td>
+                      <td><%= kisi.departman_ad || '—' %></td>
+                      <td>
+                        <select name="katilim_<%= kisi.id %>" aria-label="<%= kisi.ad %> katılım durumu">
+                          <% Object.keys(EGITIM_KATILIM_DURUMLARI).forEach(function (anahtar) { %>
+                            <option value="<%= anahtar %>" <%= kisi.katilim_durumu === anahtar ? 'selected' : '' %>><%= EGITIM_KATILIM_DURUMLARI[anahtar] %></option>
+                          <% }) %>
+                        </select>
+                      </td>
+                      <td>
+                        <input class="girdi egitim-puan-girdi" type="number" name="puan_<%= kisi.id %>" value="<%= kisi.degerlendirme_puani === null ? '' : kisi.degerlendirme_puani %>" min="0" max="100" step="0.1" inputmode="decimal" aria-label="<%= kisi.ad %> değerlendirme puanı">
+                      </td>
+                      <td>
+                        <select name="etkinlik_<%= kisi.id %>" aria-label="<%= kisi.ad %> etkinlik durumu">
+                          <% Object.keys(EGITIM_ETKINLIK_DURUMLARI).forEach(function (anahtar) { %>
+                            <option value="<%= anahtar %>" <%= kisi.etkinlik_durumu === anahtar ? 'selected' : '' %>><%= EGITIM_ETKINLIK_DURUMLARI[anahtar] %></option>
+                          <% }) %>
+                        </select>
+                      </td>
+                      <td>
+                        <input class="girdi egitim-sertifika-girdi" type="text" name="sertifika_<%= kisi.id %>" value="<%= kisi.sertifika_no %>" maxlength="80" aria-label="<%= kisi.ad %> sertifika numarası" placeholder="—">
+                      </td>
+                      <td>
+                        <input class="girdi egitim-not-girdi" type="text" name="not_<%= kisi.id %>" value="<%= kisi.not_metni %>" maxlength="1000" aria-label="<%= kisi.ad %> notu" placeholder="—">
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+            <div class="egitim-sonuc-eylem">
+              <button class="btn btn-birincil" type="submit">Sonuçları Kaydet</button>
+              <span class="metin-kucuk metin-soluk">Tek seferde tüm katılımcıların sonuçları kaydedilir.</span>
+            </div>
+          </form>
+        <% } else { %>
+          <div class="tablo-sarmal">
+            <table class="tablo egitim-katilimci-tablo">
+              <thead>
+                <tr>
+                  <th>Personel</th>
+                  <th>Departman</th>
+                  <th>Katılım</th>
+                  <th>Puan</th>
+                  <th>Etkinlik</th>
+                  <th>Sertifika No</th>
+                  <th>Not</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% katilimcilar.forEach(function (kisi) { %>
+                  <tr>
+                    <td>
+                      <div class="hucre-ad">
+                        <span class="avatar"><%= basHarfler(kisi.ad) %></span>
+                        <div><strong><%= kisi.ad %></strong><span class="metin-kucuk metin-soluk" style="display:block;"><%= kisi.email %></span></div>
+                      </div>
+                    </td>
+                    <td><%= kisi.departman_ad || '—' %></td>
+                    <td><span class="rozet <%= katilimDurumuSinifi(kisi.katilim_durumu) %>"><%= EGITIM_KATILIM_DURUMLARI[kisi.katilim_durumu] %></span></td>
+                    <td><%= kisi.degerlendirme_puani === null ? '—' : kisi.degerlendirme_puani %></td>
+                    <td><span class="rozet <%= etkinlikDurumuSinifi(kisi.etkinlik_durumu) %>"><%= EGITIM_ETKINLIK_DURUMLARI[kisi.etkinlik_durumu] %></span></td>
+                    <td><%= kisi.sertifika_no || '—' %></td>
+                    <td class="metin-kucuk"><%= kisi.not_metni || '—' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      <% } else { %>
+        <div class="bilgi-kutu">
+          <%= yonetici
+            ? 'Bu eğitime henüz katılımcı atanmadı. Sağdaki “Katılımcı Ekle” bölümünden departman veya kişi seçerek personel ekleyebilirsiniz.'
+            : 'Bu eğitime henüz katılımcı atanmadı.' %>
+        </div>
+      <% } %>
+    </section>
+  </div>
+
+  <aside class="dikey">
+    <% if (yonetici) { %>
+      <section class="kart">
+        <div class="kart-bas"><div><h2>İşlemler</h2><p>Eğitim durumunu ve hatırlatmaları yönetin.</p></div></div>
+        <div class="egitim-eylem-grubu">
+          <% if (egitim.durum !== 'tamamlandi') { %>
+            <form method="post" action="/egitim/<%= egitim.id %>/durum">
+              <input type="hidden" name="durum" value="tamamlandi">
+              <button class="btn btn-basari btn-blok" type="submit">✓ Tamamlandı olarak işaretle</button>
+            </form>
+          <% } %>
+          <form method="post" action="/egitim/<%= egitim.id %>/hatirlat">
+            <button class="btn btn-ikincil btn-blok" type="submit">Hatırlatma E-postası Gönder</button>
+          </form>
+          <% if (egitim.durum !== 'iptal') { %>
+            <form method="post" action="/egitim/<%= egitim.id %>/durum" data-onay="Eğitim iptal durumuna alınacak. Devam edilsin mi?">
+              <input type="hidden" name="durum" value="iptal">
+              <button class="btn btn-tehlike btn-blok" type="submit">İptal Et</button>
+            </form>
+          <% } else { %>
+            <form method="post" action="/egitim/<%= egitim.id %>/durum">
+              <input type="hidden" name="durum" value="planlandi">
+              <button class="btn btn-ikincil btn-blok" type="submit">Yeniden Planlandı Yap</button>
+            </form>
+          <% } %>
+        </div>
+        <p class="metin-kucuk metin-soluk egitim-hatirlatma-not">
+          Son hatırlatma: <%= sonHatirlatma ? zamanTr(sonHatirlatma) : 'henüz gönderilmedi' %>.
+          Hatırlatma, katılım durumu “Bekliyor” olan katılımcılara 7 gün kala gönderilir.
+        </p>
+      </section>
+
+      <details class="kart egitim-duzenle">
+        <summary class="egitim-duzenle-bas">
+          <span><strong>Eğitimi Güncelle</strong><small>Ad, tür, tarih, süre, eğitmen ve doküman bilgilerini düzenleyin.</small></span>
+          <span class="btn btn-kucuk btn-hayalet">Aç</span>
+        </summary>
+        <form method="post" action="/egitim/<%= egitim.id %>" class="egitim-guncelle-form">
+          <div class="form-grid">
+            <div class="alan tam">
+              <label for="guncelle-ad">Eğitim adı</label>
+              <input class="girdi" type="text" id="guncelle-ad" name="ad" value="<%= egitim.ad %>" minlength="3" maxlength="160" required>
+            </div>
+            <div class="alan">
+              <label for="guncelle-tur">Tür</label>
+              <select id="guncelle-tur" name="tur" required>
+                <% Object.keys(EGITIM_TURLERI).forEach(function (anahtar) { %>
+                  <option value="<%= anahtar %>" <%= egitim.tur === anahtar ? 'selected' : '' %>><%= EGITIM_TURLERI[anahtar] %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="alan">
+              <label for="guncelle-egitmen">Eğitmen</label>
+              <input class="girdi" type="text" id="guncelle-egitmen" name="egitmen" value="<%= egitim.egitmen %>" maxlength="120">
+            </div>
+            <div class="alan">
+              <label for="guncelle-tarih">Planlanan tarih</label>
+              <input class="girdi" type="date" id="guncelle-tarih" name="planlanan_tarih" value="<%= egitim.planlanan_tarih %>" required>
+            </div>
+            <div class="alan">
+              <label for="guncelle-sure">Süre (saat)</label>
+              <input class="girdi" type="number" id="guncelle-sure" name="sure_saat" value="<%= egitim.sure_saat %>" min="0.5" max="100" step="0.5" required>
+            </div>
+            <div class="alan tam">
+              <label for="guncelle-dokuman">İlgili doküman</label>
+              <select id="guncelle-dokuman" name="dokuman_id">
+                <option value="">— Doküman seçilmedi —</option>
+                <% dokumanlar.forEach(function (dokuman) { %>
+                  <option value="<%= dokuman.id %>" <%= egitim.dokuman_id === dokuman.id ? 'selected' : '' %>>
+                    <%= dokuman.kod %> · <%= dokuman.baslik %><%= dokuman.durum === 'yayinda' ? '' : ' (arşiv)' %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="alan tam">
+              <label for="guncelle-aciklama">Açıklama</label>
+              <textarea id="guncelle-aciklama" name="aciklama" maxlength="1000" rows="3"><%= egitim.aciklama %></textarea>
+            </div>
+          </div>
+          <button class="btn btn-birincil btn-blok" type="submit">Bilgileri Kaydet</button>
+        </form>
+      </details>
+
+      <details class="kart egitim-duzenle">
+        <summary class="egitim-duzenle-bas">
+          <span><strong>Katılımcı Ekle</strong><small>Departman veya kişi seçerek eğitime personel ekleyin.</small></span>
+          <span class="btn btn-kucuk btn-hayalet">Aç</span>
+        </summary>
+        <% const eklenebilirGruplar = gruplar.filter(function (grup) { return grup.kullanicilar.length > 0; }); %>
+        <% if (eklenebilirGruplar.length || departmansiz.length) { %>
+          <form method="post" action="/egitim/<%= egitim.id %>/katilimcilar" class="egitim-ekle-form">
+            <div class="egitim-secim-grid kompakt">
+              <% eklenebilirGruplar.forEach(function (grup) { %>
+                <div class="egitim-secim-kart">
+                  <label class="egitim-secim-departman onay-alani">
+                    <input type="checkbox" name="departmanlar" value="<%= grup.id %>">
+                    <span><strong><%= grup.ad %></strong><small><%= grup.kullanicilar.length %> kişi eklenebilir</small></span>
+                  </label>
+                  <div class="egitim-kisi-listesi">
+                    <% grup.kullanicilar.forEach(function (kisi) { %>
+                      <label class="egitim-kisi">
+                        <input type="checkbox" name="kullanicilar" value="<%= kisi.id %>">
+                        <span class="avatar"><%= basHarfler(kisi.ad) %></span>
+                        <span class="egitim-kisi-bilgi"><strong><%= kisi.ad %></strong><small><%= kisi.email %></small></span>
+                      </label>
+                    <% }) %>
+                  </div>
+                </div>
+              <% }) %>
+              <% if (departmansiz.length) { %>
+                <div class="egitim-secim-kart">
+                  <div class="egitim-secim-departman egitim-secim-departmansiz"><span><strong>Departmansız</strong><small><%= departmansiz.length %> kişi</small></span></div>
+                  <div class="egitim-kisi-listesi">
+                    <% departmansiz.forEach(function (kisi) { %>
+                      <label class="egitim-kisi">
+                        <input type="checkbox" name="kullanicilar" value="<%= kisi.id %>">
+                        <span class="avatar"><%= basHarfler(kisi.ad) %></span>
+                        <span class="egitim-kisi-bilgi"><strong><%= kisi.ad %></strong><small><%= kisi.email %></small></span>
+                      </label>
+                    <% }) %>
+                  </div>
+                </div>
+              <% } %>
+            </div>
+            <button class="btn btn-birincil btn-blok" type="submit">Seçilenleri Ekle</button>
+          </form>
+        <% } else { %>
+          <p class="metin-kucuk metin-soluk" style="margin:0;">Tüm aktif personel zaten bu eğitimin katılımcısı.</p>
+        <% } %>
+      </details>
+    <% } else { %>
+      <section class="kart">
+        <div class="kart-bas"><div><h2>Eğitim Kaydı</h2><p>Bu sayfa salt okunur görünümdedir.</p></div></div>
+        <p class="metin-kucuk metin-soluk" style="margin:0;">Katılım sonuçlarını yalnızca eğitim yönetimi yetkisi olan kullanıcılar güncelleyebilir.</p>
+        <a class="btn btn-hayalet btn-blok egitim-yetki-link" href="/egitim/personel">Kendi eğitim sicilimi görüntüle</a>
+      </section>
+    <% } %>
+  </aside>
+</div>
+
+<%- include('partials/alt') %>

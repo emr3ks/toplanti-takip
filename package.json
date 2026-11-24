@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test --test-concurrency=1 test/app.test.js test/auth.test.js test/qdms.test.js test/dates.test.js test/mailer.test.js test/settings.test.js",
+    "test": "node --test --test-concurrency=1 test/app.test.js test/auth.test.js test/qdms.test.js test/dates.test.js test/mailer.test.js test/settings.test.js test/pdf-logo.test.js test/disa-aktarma.test.js test/bildirimler.test.js test/egitim.test.js test/raporlar.test.js",
     "demo": "node scripts/demo-verisi.js"
   },
   "engines": {

@@ -1,0 +1,256 @@
+<%- include('partials/ust', { aktifSayfa: 'raporlar' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Yıllık Eğitim Matrisi</h1>
+    <p>Bu rapor seçilen yılın eğitim planını; katılım, değerlendirme puanı ve etkinlik sonuçlarıyla birlikte sunar. Matris görünümü kişi × eğitim tablosu oluşturur, liste görünümü eğitim bazında özet verir.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/raporlar">← Raporlar</a>
+  </div>
+</div>
+
+<section class="istatistik-grid rapor-egitim-istatistik" aria-label="Yıllık eğitim özeti">
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= rapor.ozet.toplam %></strong>
+      <span>Toplam eğitim</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon amber"><%- include('partials/ikon', { ad: 'zil' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= rapor.ozet.planlanan %></strong>
+      <span>Planlanan</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon yesil"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= rapor.ozet.tamamlanan %></strong>
+      <span>Tamamlanan</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon slate"><%- include('partials/ikon', { ad: 'organizasyon' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= rapor.ozet.katilimci %></strong>
+      <span>Toplam katılımcı</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= raporYuzde(rapor.ozet.katilimOrani) %></strong>
+      <span>Katılım oranı</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon amber"><%- include('partials/ikon', { ad: 'egitim' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= raporPuan(rapor.ozet.ortalamaPuan) %></strong>
+      <span>Ortalama puan</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon yesil"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= raporYuzde(rapor.ozet.etkinlikOrani) %></strong>
+      <span>Etkinlik oranı</span>
+    </span>
+  </div>
+</section>
+
+<div class="sekmeler">
+  <a class="sekme <%= gorunum === 'matris' ? 'aktif' : '' %>" href="<%= adresler.matris %>">Matris</a>
+  <a class="sekme <%= gorunum === 'liste' ? 'aktif' : '' %>" href="<%= adresler.liste %>">Liste</a>
+</div>
+
+<form class="rapor-filtre" method="get" action="/raporlar/egitim">
+  <input type="hidden" name="gorunum" value="<%= gorunum %>">
+  <div class="alan">
+    <label for="egitim-yil">Yıl</label>
+    <select id="egitim-yil" name="yil">
+      <% rapor.yillar.forEach(function (yil) { %>
+        <option value="<%= yil %>" <%= yil === rapor.filtreler.yil ? 'selected' : '' %>><%= yil %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="alan">
+    <label for="egitim-durum">Eğitim durumu</label>
+    <select id="egitim-durum" name="durum">
+      <option value="hepsi" <%= rapor.filtreler.durum === 'hepsi' ? 'selected' : '' %>>Tüm durumlar</option>
+      <option value="planlandi" <%= rapor.filtreler.durum === 'planlandi' ? 'selected' : '' %>>Planlandı</option>
+      <option value="tamamlandi" <%= rapor.filtreler.durum === 'tamamlandi' ? 'selected' : '' %>>Tamamlandı</option>
+      <option value="iptal" <%= rapor.filtreler.durum === 'iptal' ? 'selected' : '' %>>İptal</option>
+    </select>
+  </div>
+  <div class="rapor-filtre-eylem">
+    <button class="btn btn-ikincil" type="submit">Filtrele</button>
+    <a class="btn btn-hayalet" href="<%= adresler.temiz %>">Temizle</a>
+  </div>
+</form>
+
+<div class="rapor-disa-aktar">
+  <span class="rapor-disa-aktar-etiket">Dışa Aktar</span>
+  <a class="btn btn-ikincil btn-kucuk" href="<%= adresler.listeCsv %>">Liste CSV</a>
+  <a class="btn btn-ikincil btn-kucuk" href="<%= adresler.listeXlsx %>">Liste Excel</a>
+  <a class="btn btn-hayalet btn-kucuk" href="<%= adresler.matrisCsv %>">Matris CSV</a>
+  <a class="btn btn-hayalet btn-kucuk" href="<%= adresler.matrisXlsx %>">Matris Excel</a>
+</div>
+
+<div class="rapor-filtre-ozet">
+  <span class="rapor-filtre-baslik">Aktif filtre:</span>
+  <% filtreOzeti.forEach(function (parca) { %><span class="cip"><%= parca %></span><% }) %>
+</div>
+
+<% if (gorunum === 'matris') { %>
+  <div class="kart">
+    <div class="kart-bas">
+      <div>
+        <h2><%= rapor.filtreler.yil %> yılı eğitim matrisi</h2>
+        <p>Her hücre katılım durumunu gösterir; katılan kişilerin değerlendirme puanı parantez içinde yer alır. “—” ilgili kişinin o eğitime atanmadığını gösterir.</p>
+      </div>
+      <span class="rozet rozet-acik">
+        <%= rapor.matris ? rapor.matris.satirlar.length : 0 %> personel · <%= rapor.matris ? rapor.matris.egitimler.length : 0 %> eğitim
+      </span>
+    </div>
+
+    <% if (!rapor.egitimler.length) { %>
+      <div class="bos">
+        <div class="bos-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></div>
+        <h3>Bu filtrelerde eğitim yok</h3>
+        <p><%= rapor.filtreler.yil %> yılı için seçilen duruma uyan eğitim bulunamadı. Farklı bir yıl seçin veya filtreleri temizleyin.</p>
+        <a class="btn btn-birincil" href="<%= adresler.temiz %>">Filtreleri Temizle</a>
+      </div>
+    <% } else if (!rapor.matris || !rapor.matris.satirlar.length) { %>
+      <div class="bos">
+        <div class="bos-ikon"><%- include('partials/ikon', { ad: 'organizasyon' }) %></div>
+        <h3>Katılımcı kaydı bulunamadı</h3>
+        <p>Seçilen eğitimlerde kayıtlı katılımcı yok. Eğitim detayından katılımcı ekleyebilirsiniz.</p>
+        <a class="btn btn-ikincil" href="/egitim">Eğitim Yönetimi</a>
+      </div>
+    <% } else { %>
+      <div class="tablo-sarmal rapor-matris-sarmal">
+        <table class="tablo rapor-matris rapor-matris-egitim-tablo">
+          <thead>
+            <tr>
+              <th>Personel</th>
+              <th>Departman</th>
+              <% rapor.matris.egitimler.forEach(function (egitim) { %>
+                <th class="rapor-matris-egitim" title="<%= egitim.ad %>">
+                  <span><%= egitim.ad %></span>
+                  <span class="rapor-matris-alt"><%= tarihTr(egitim.planlanan_tarih) %> · <%= EGITIM_TURLERI[egitim.tur] %></span>
+                </th>
+              <% }) %>
+              <th class="rapor-matris-toplam">Katıldığı / Toplam</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% rapor.matris.satirlar.forEach(function (kisi) { %>
+              <tr>
+                <td>
+                  <div class="rapor-kisi">
+                    <strong><%= kisi.ad %></strong>
+                  </div>
+                </td>
+                <td class="metin-kucuk metin-soluk"><%= kisi.departman_ad || '—' %></td>
+                <% rapor.matris.egitimler.forEach(function (egitim) { const hucre = kisi.hucreler[egitim.id]; %>
+                  <td>
+                    <% if (!hucre) { %>
+                      <span class="rapor-hucre-bos">—</span>
+                    <% } else if (hucre.katilim_durumu === 'katildi') { %>
+                      <span class="rapor-hucre rapor-hucre-katildi">
+                        Katıldı<% if (hucre.degerlendirme_puani !== null) { %> (<%= raporPuan(hucre.degerlendirme_puani) %>)<% } %>
+                      </span>
+                    <% } else if (hucre.katilim_durumu === 'katilmadi') { %>
+                      <span class="rapor-hucre rapor-hucre-katilmadi">Katılmadı</span>
+                    <% } else { %>
+                      <span class="rapor-hucre rapor-hucre-bekliyor">Bekliyor</span>
+                    <% } %>
+                  </td>
+                <% }) %>
+                <td class="rapor-matris-toplam"><%= kisi.katildi %>/<%= kisi.toplam %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="metin-kucuk metin-soluk rapor-tablo-not">
+        <%= rapor.matris.egitimler.length %> eğitim sütunu gösteriliyor; tablo yatay olarak kaydırılabilir.
+      </p>
+    <% } %>
+  </div>
+<% } else { %>
+  <div class="kart">
+    <div class="kart-bas">
+      <div>
+        <h2>Eğitim bazında gerçekleşme</h2>
+        <p>Katılım oranı katıldı / (katıldı + katılmadı) olarak hesaplanır; bekleyen katılımcılar paydaya dahil edilmez.</p>
+      </div>
+      <span class="rozet rozet-acik"><%= rapor.egitimler.length %> eğitim</span>
+    </div>
+
+    <% if (rapor.egitimler.length) { %>
+      <div class="tablo-sarmal">
+        <table class="tablo rapor-egitim-tablo">
+          <thead>
+            <tr>
+              <th>Eğitim</th>
+              <th>Tür</th>
+              <th>Tarih</th>
+              <th>Eğitmen</th>
+              <th>Süre (saat)</th>
+              <th>İlgili Doküman</th>
+              <th>Planlanan</th>
+              <th>Katılan</th>
+              <th>Katılmayan</th>
+              <th>Bekleyen</th>
+              <th>Katılım %</th>
+              <th>Ort. Puan</th>
+              <th>Etkinlik %</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% rapor.egitimler.forEach(function (egitim) { %>
+              <tr>
+                <td>
+                  <a class="egitim-ad-link" href="/egitim/<%= egitim.id %>"><strong><%= egitim.ad %></strong></a>
+                </td>
+                <td><span class="rozet egitim-tur-<%= egitim.tur %>"><%= EGITIM_TURLERI[egitim.tur] %></span></td>
+                <td class="mono"><%= tarihTr(egitim.planlanan_tarih) %></td>
+                <td><%= egitim.egitmen || '—' %></td>
+                <td><%= raporSayi(egitim.sure_saat) %> saat</td>
+                <td>
+                  <% if (egitim.dokuman_kod) { %>
+                    <a class="egitim-dokuman-link" href="/dokumanlar/<%= egitim.dokuman_id || '' %>" title="<%= egitim.dokuman_baslik %>"><span class="mono"><%= egitim.dokuman_kod %></span></a>
+                  <% } else { %>
+                    <span class="metin-soluk">—</span>
+                  <% } %>
+                </td>
+                <td><%= egitim.katilimci_sayisi %></td>
+                <td><strong><%= egitim.katilan_sayisi %></strong></td>
+                <td><%= egitim.katilmayan_sayisi %></td>
+                <td><%= egitim.bekleyen_sayisi %></td>
+                <td><%= raporYuzde(egitim.katilimYuzdesi) %></td>
+                <td><%= raporPuan(egitim.ortalamaPuan) %></td>
+                <td><%= raporYuzde(egitim.etkinlikYuzdesi) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="metin-kucuk metin-soluk rapor-tablo-not"><%= rapor.egitimler.length %> eğitim listeleniyor.</p>
+    <% } else { %>
+      <div class="bos">
+        <div class="bos-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></div>
+        <h3>Bu filtrelerde eğitim yok</h3>
+        <p><%= rapor.filtreler.yil %> yılı için seçilen duruma uyan eğitim bulunamadı. Farklı bir yıl seçin veya filtreleri temizleyin.</p>
+        <a class="btn btn-birincil" href="<%= adresler.temiz %>">Filtreleri Temizle</a>
+      </div>
+    <% } %>
+  </div>
+<% } %>
+
+<%- include('partials/alt') %>

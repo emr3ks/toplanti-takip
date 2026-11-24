@@ -7,6 +7,7 @@ const { tarihTr } = require('./dates');
 const A4 = { genislik: 595.28, yukseklik: 841.89 };
 const KENAR = { sol: 48, sag: 48, ust: 165, alt: 118 };
 const ICERIK_GENISLIK = A4.genislik - KENAR.sol - KENAR.sag;
+const LOGO_KUTU = Object.freeze({ genislik: 140, yukseklik: 52, icBosluk: 5 });
 
 const TURKCE_HARITA = Object.freeze({
   ı: 'i',
@@ -113,12 +114,133 @@ function stilCiz(doc, x, y, genislik, yukseklik, stil) {
   doc.restore();
 }
 
+const PNG_IMZASI = Object.freeze([0x89, 0x50, 0x4e, 0x47]);
+const JPEG_IMZASI = Object.freeze([0xff, 0xd8, 0xff]);
+
+function logoUyar(mesaj) {
+  console.warn(`[pdf] Logo: ${mesaj}`);
+}
+
+/** Görselin gerçek biçimini dosya uzantısına değil, imza baytlarına göre belirler. */
+function logoBicimi(veri) {
+  if (!Buffer.isBuffer(veri) || veri.length < 3) return null;
+  if (veri.length >= 4 && PNG_IMZASI.every((bayt, indeks) => veri[indeks] === bayt)) {
+    return 'png';
+  }
+  if (JPEG_IMZASI.every((bayt, indeks) => veri[indeks] === bayt)) {
+    return 'jpeg';
+  }
+  if (
+    veri.length >= 12 &&
+    veri.toString('ascii', 0, 4) === 'RIFF' &&
+    veri.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    return 'webp';
+  }
+  return null;
+}
+
+/** base64 kodlamalı data URI'yi çözer; biçim doğrulaması çağıran tarafta yapılır. */
+function dataUriCoz(metin) {
+  const virgul = metin.indexOf(',');
+  if (virgul < 0) {
+    logoUyar('data URI biçimi geçersiz.');
+    return null;
+  }
+  const ustBilgi = metin.slice(5, virgul);
+  if (!/(?:^|;)base64(?:;|$)/i.test(ustBilgi)) {
+    logoUyar('data URI base64 kodlamalı değil.');
+    return null;
+  }
+  const govde = metin.slice(virgul + 1).replace(/\s+/g, '');
+  if (!govde || !/^[A-Za-z0-9+/]+={0,2}$/.test(govde)) {
+    logoUyar('data URI içindeki base64 verisi geçersiz.');
+    return null;
+  }
+  return Buffer.from(govde, 'base64');
+}
+
+/**
+ * Logoyu PDFKit'in gömebileceği bir Buffer'a çözer.
+ *
+ * Kabul edilen kaynaklar: PNG/JPEG dosya yolu, PNG/JPEG baytları içeren
+ * Buffer/Uint8Array, base64 data URI ve imza baytları geçerli ham base64.
+ * Desteklenmeyen biçimlerde (ör. WEBP) null döner ve tek bir uyarı yazar;
+ * böylece logo sorunu PDF üretimini engellemez ama sessizce de kaybolmaz.
+ */
+function logoVerisiCoz(kaynak) {
+  if (kaynak === null || kaynak === undefined) return null;
+
+  let veri = null;
+  if (Buffer.isBuffer(kaynak)) {
+    veri = kaynak;
+  } else if (kaynak instanceof Uint8Array) {
+    veri = Buffer.from(kaynak);
+  } else if (typeof kaynak === 'string') {
+    const metin = kaynak.trim();
+    if (!metin) return null;
+
+    if (/^data:/i.test(metin)) {
+      veri = dataUriCoz(metin);
+      if (!veri) return null;
+    } else {
+      let dosyaVar = false;
+      try {
+        dosyaVar = fs.existsSync(metin);
+      } catch {
+        dosyaVar = false;
+      }
+      if (dosyaVar) {
+        try {
+          veri = fs.readFileSync(metin);
+        } catch (hata) {
+          logoUyar(`dosya okunamadı (${hata.code || hata.message}).`);
+          return null;
+        }
+      } else {
+        const temiz = metin.replace(/\s+/g, '');
+        if (temiz.length < 16 || !/^[A-Za-z0-9+/]+={0,2}$/.test(temiz)) {
+          logoUyar('kaynak ne geçerli bir dosya yolu ne de base64 verisi.');
+          return null;
+        }
+        veri = Buffer.from(temiz, 'base64');
+      }
+    }
+  } else {
+    logoUyar('desteklenmeyen kaynak türü.');
+    return null;
+  }
+
+  const tur = logoBicimi(veri);
+  if (tur === 'webp') {
+    logoUyar('WEBP biçimi PDFKit tarafından desteklenmiyor; lütfen PNG veya JPEG kullanın.');
+    return null;
+  }
+  if (tur !== 'png' && tur !== 'jpeg') {
+    logoUyar('desteklenmeyen görsel biçimi; yalnızca PNG veya JPEG gömülebilir.');
+    return null;
+  }
+  return { veri, tur };
+}
+
+/** Şirket adını logo kutusuna taşmadan tek satıra sığdırır. */
+function metniSigdir(doc, metin, genislik) {
+  if (!metin || doc.widthOfString(metin) <= genislik) return metin;
+  const nokta = '…';
+  let kesik = metin;
+  while (kesik.length > 0 && doc.widthOfString(`${kesik}${nokta}`) > genislik) {
+    kesik = kesik.slice(0, -1);
+  }
+  return `${kesik.replace(/\s+$/, '')}${nokta}`;
+}
+
 function pdfUret({
   dokuman,
   sablon,
   sirket,
   tur,
   logoYolu = null,
+  logoVerisi = null,
   hazirlayanAd = '',
   onaylayanAd = '',
 }) {
@@ -162,32 +284,76 @@ function pdfUret({
         ? tarihMetni(dokuman.yayin_tarihi || dokuman.onay_tarihi)
         : '—';
     const sirketAdi = sirket?.ad || 'Kurumsal Kalite Yönetim Sistemi';
-    const logo = logoYolu && fs.existsSync(logoYolu) ? logoYolu : null;
+    // logoVerisi verilmişse (Buffer/data URI/yol) önceliklidir; aksi halde
+    // geriye dönük uyumluluk için logoYolu kullanılır.
+    const logoKaynagi =
+      logoVerisi !== null && logoVerisi !== undefined && logoVerisi !== ''
+        ? logoVerisi
+        : logoYolu;
+    const logo = logoKaynagi ? logoVerisiCoz(logoKaynagi) : null;
 
     function antetCiz() {
       const x = KENAR.sol;
       const ust = 34;
       doc.rect(x, ust, ICERIK_GENISLIK, 5).fillColor(antetRenk).fill();
 
+      const logoKutuY = ust + 14;
       if (logo) {
+        const icX = x + LOGO_KUTU.icBosluk;
+        const icY = logoKutuY + LOGO_KUTU.icBosluk;
+        const icGenislik = LOGO_KUTU.genislik - LOGO_KUTU.icBosluk * 2;
+        const icYukseklik = LOGO_KUTU.yukseklik - LOGO_KUTU.icBosluk * 2;
+        doc.save();
+        doc
+          .rect(x, logoKutuY, LOGO_KUTU.genislik, LOGO_KUTU.yukseklik)
+          .fillColor('#ffffff')
+          .fill();
+        let gorselCizildi = false;
         try {
-          doc.image(logo, x, ust + 14, { fit: [116, 48] });
-        } catch {
-          /* bozuk logo dosyası PDF üretimini engellemesin */
+          doc.image(logo.veri, icX, icY, {
+            fit: [icGenislik, icYukseklik],
+            align: 'center',
+            valign: 'center',
+          });
+          gorselCizildi = true;
+        } catch (hata) {
+          // Bozuk görsel PDF üretimini engellemesin; kutuyu tamamen kaldır.
+          logoUyar(`görsel çizilemedi (${hata.message}).`);
+          doc
+            .rect(x, logoKutuY, LOGO_KUTU.genislik, LOGO_KUTU.yukseklik)
+            .fillColor('#ffffff')
+            .fill();
         }
+        if (gorselCizildi) {
+          doc
+            .lineWidth(0.8)
+            .strokeColor(antetRenk)
+            .rect(x, logoKutuY, LOGO_KUTU.genislik, LOGO_KUTU.yukseklik)
+            .stroke();
+        }
+        doc.restore();
       }
 
-      doc
-        .fillColor('#0f172a')
-        .font(kalin)
-        .fontSize(13.5)
-        .text(yazi(sirketAdi), x, ust + 14, { width: ICERIK_GENISLIK, align: 'right' });
+      // Logo varsa şirket adı sağdaki daralan bloğa sığdırılır; böylece
+      // uzun adlar logonun üzerine binmez ve alt bilgiyle çakışmaz.
+      const sirketX = logo ? x + LOGO_KUTU.genislik + 12 : x;
+      const sirketGenislik = logo
+        ? ICERIK_GENISLIK - LOGO_KUTU.genislik - 12
+        : ICERIK_GENISLIK;
+      doc.fillColor('#0f172a').font(kalin).fontSize(13.5);
+      const sirketMetni = yazi(sirketAdi);
+      doc.text(
+        logo ? metniSigdir(doc, sirketMetni, sirketGenislik) : sirketMetni,
+        sirketX,
+        ust + 14,
+        { width: sirketGenislik, align: 'right' }
+      );
       doc
         .font(govde)
         .fontSize(8)
         .fillColor('#64748b')
-        .text(yazi('Kalite Yönetim Sistemi Dokümanı'), x, ust + 33, {
-          width: ICERIK_GENISLIK,
+        .text(yazi('Kalite Yönetim Sistemi Dokümanı'), sirketX, ust + 33, {
+          width: sirketGenislik,
           align: 'right',
         });
 
@@ -433,4 +599,4 @@ function pdfUret({
   });
 }
 
-module.exports = { pdfUret, turkceAscii, renkGecerliMi };
+module.exports = { pdfUret, logoVerisiCoz, turkceAscii, renkGecerliMi };

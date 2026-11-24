@@ -1,0 +1,70 @@
+<%- include('partials/ust', { aktifSayfa: 'raporlar' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Kurumsal Raporlar</h1>
+    <p>Doküman dağıtımının, okundu onaylarının ve yıllık eğitim planının kurumsal görünümü. Her raporu ekranda inceleyebilir, filtreleri koruyarak CSV veya Excel olarak indirebilirsiniz.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <span class="rozet rozet-acik"><%= tarihTr(bugun) %></span>
+  </div>
+</div>
+
+<section class="istatistik-grid rapor-istatistik" aria-label="Rapor özeti">
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'dokuman' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.yayindaDokuman %></strong>
+      <span>Yayındaki doküman</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon slate"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.toplamOkuma %></strong>
+      <span>Toplam okuma kaydı</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon yesil"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= raporYuzde(ozet.okunmaOrani) %></strong>
+      <span>Okunma oranı</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon amber"><%- include('partials/ikon', { ad: 'egitim' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.yilEgitim %></strong>
+      <span><%= buYil %> yılı eğitimi</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= raporYuzde(ozet.katilimOrani) %></strong>
+      <span>Katılım oranı</span>
+    </span>
+  </div>
+</section>
+
+<div class="rapor-kartlar">
+  <% raporlar.forEach(function (rapor) { %>
+    <section class="kart rapor-kart">
+      <span class="rapor-kart-ikon"><%- include('partials/ikon', { ad: rapor.ikon }) %></span>
+      <h2><%= rapor.baslik %></h2>
+      <p><%= rapor.aciklama %></p>
+      <div class="rapor-kart-alt">
+        <a class="btn btn-birincil" href="<%= rapor.adres %>">Raporu Aç</a>
+        <a class="btn btn-hayalet btn-kucuk" href="<%= rapor.csv %>" title="CSV olarak indir">CSV</a>
+        <a class="btn btn-hayalet btn-kucuk" href="<%= rapor.xlsx %>" title="Excel olarak indir">Excel</a>
+      </div>
+    </section>
+  <% }) %>
+</div>
+
+<div class="bilgi-kutu">
+  <strong>Dışa aktarma hakkında:</strong> CSV dosyaları Türkçe Excel ile uyumlu olacak şekilde UTF-8 BOM, noktalı virgül (;) ayraç ve CRLF satır sonu kullanır. Excel dosyaları gerçek .xlsx biçimindedir; başlık satırı biçimlendirilmiş, ilk satır dondurulmuş ve otomatik filtre açıktır. Raporlarda yalnızca yayındaki dokümanlar ile aktif personel dikkate alınır.
+</div>
+
+<%- include('partials/alt') %>

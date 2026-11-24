@@ -8,7 +8,7 @@
 
 const { loadConfig } = require('../src/config');
 const { openDatabase } = require('../src/db');
-const { bugunTz, gunEkle } = require('../src/dates');
+const { bugunTz, gunEkle, tarihTr } = require('../src/dates');
 const { ayarlariKaydet, etkinAyarlar, sirketAyarlariKaydet } = require('../src/settings');
 const { kullaniciOlustur, VARSAYILAN_ADMIN } = require('../src/auth');
 const qdms = require('../src/qdms');
@@ -29,6 +29,8 @@ if (mevcut > 0 && !sifirla) {
 
 if (sifirla) {
   db.exec(`
+    DELETE FROM egitim_katilimcilari;
+    DELETE FROM egitimler;
     DELETE FROM bildirimler;
     DELETE FROM dokuman_okumalari;
     DELETE FROM dokuman_onaylari;
@@ -38,7 +40,7 @@ if (sifirla) {
     DELETE FROM email_kayitlari;
     DELETE FROM kullanicilar;
   `);
-  console.log('Mevcut doküman, kullanıcı ve e-posta kayıtları temizlendi.');
+  console.log('Mevcut doküman, eğitim, kullanıcı ve e-posta kayıtları temizlendi.');
 }
 
 const ayarlar = etkinAyarlar(db, config);
@@ -353,6 +355,119 @@ const ek001 = dokumanEkle({
   olusturmaTarihi: gunOnce(1),
 });
 onayGecmisiEkle(ek001, hazirlayan, 'olustur', 'El kitabı taslağı oluşturuldu.', gunOnce(1));
+
+// ---------------------------------------------------------------------------
+// Eğitim Yönetimi örnekleri
+// ---------------------------------------------------------------------------
+function egitimEkle({
+  ad,
+  tur,
+  egitmen,
+  planlananTarih,
+  sureSaat,
+  dokumanId = null,
+  aciklama = '',
+  durum = 'planlandi',
+  katilimcilar = [],
+}) {
+  const bilgi = db
+    .prepare(
+      `INSERT INTO egitimler
+        (ad, tur, egitmen, planlanan_tarih, sure_saat, dokuman_id, aciklama, durum,
+         olusturan_id, olusturma_tarihi, guncelleme_tarihi)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(ad, tur, egitmen, planlananTarih, sureSaat, dokumanId, aciklama, durum, kalite, simdi, simdi);
+  const egitimId = Number(bilgi.lastInsertRowid);
+  const ekle = db.prepare(
+    `INSERT OR IGNORE INTO egitim_katilimcilari
+      (egitim_id, kullanici_id, katilim_durumu, degerlendirme_puani, etkinlik_durumu,
+       sertifika_no, not_metni, olusturma_tarihi)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  for (const kisi of katilimcilar) {
+    ekle.run(
+      egitimId,
+      kisi.id,
+      kisi.katilimDurumu || 'bekliyor',
+      kisi.puan ?? null,
+      kisi.etkinlik || 'bekliyor',
+      kisi.sertifika || '',
+      kisi.not || '',
+      simdi
+    );
+    if (durum === 'planlandi') {
+      db.prepare(
+        `INSERT INTO bildirimler (kullanici_id, tur, baslik, mesaj, baglanti, olusturma_tarihi)
+         VALUES (?, 'egitim', ?, ?, ?, ?)`
+      ).run(
+        kisi.id,
+        `Yeni eğitim: ${ad}`,
+        `${tarihTr(planlananTarih)} · ${egitmen || 'Eğitmen belirtilmedi'}. Eğitim detayını görüntüleyin.`,
+        `/egitim/${egitimId}`,
+        simdi
+      );
+    }
+  }
+  return egitimId;
+}
+
+const egitimGecmis = egitimEkle({
+  ad: 'Kalite Kayıtları ve Doküman Kontrolü Eğitimi',
+  tur: 'ic',
+  egitmen: 'Ayşe Yıldız',
+  planlananTarih: gunOnce(10),
+  sureSaat: 2,
+  dokumanId: pr001,
+  aciklama: 'Kalite kayıtlarının saklanması, doküman kontrolü ve okuma onayı süreci.',
+  durum: 'tamamlandi',
+  katilimcilar: [
+    { id: hazirlayan, katilimDurumu: 'katildi', puan: 92, etkinlik: 'etkin', sertifika: 'EGT-2026-001' },
+    { id: saha, katilimDurumu: 'katildi', puan: 84, etkinlik: 'etkin', sertifika: 'EGT-2026-002' },
+    { id: bakimci, katilimDurumu: 'katilmadi', etkinlik: 'etkin_degil', not: 'Mazeret bildirdi.' },
+  ],
+});
+
+const egitimYaklasan = egitimEkle({
+  ad: 'İş Güvenliği ve Kişisel Koruyucu Donanım',
+  tur: 'ic',
+  egitmen: 'Mert Demir',
+  planlananTarih: gunEkle(bugun, 5),
+  sureSaat: 1.5,
+  dokumanId: tl001,
+  aciklama: 'CNC tezgâhı kullanımı ve kişisel koruyucu donanım kuralları.',
+  katilimcilar: [
+    { id: saha },
+    { id: bakimci },
+    { id: hazirlayan },
+  ],
+});
+
+egitimEkle({
+  ad: 'ISO 9001 İç Denetçi Eğitimi',
+  tur: 'dis',
+  egitmen: 'Dış Eğitim Kurumu',
+  planlananTarih: gunOnce(45),
+  sureSaat: 16,
+  dokumanId: ek001,
+  aciklama: 'İç denetim planlaması, kanıt toplama ve uygunsuzluk yönetimi.',
+  durum: 'tamamlandi',
+  katilimcilar: [
+    { id: kalite, katilimDurumu: 'katildi', puan: 96, etkinlik: 'etkin', sertifika: 'ISO-IA-2026-014' },
+    { id: admin, katilimDurumu: 'katildi', puan: 88, etkinlik: 'etkin', sertifika: 'ISO-IA-2026-015' },
+    { id: onaylayan, katilimDurumu: 'katildi', puan: 90, etkinlik: 'etkin', sertifika: 'ISO-IA-2026-016' },
+  ],
+});
+
+egitimEkle({
+  ad: 'Ölçüm Cihazları ve Kalibrasyon Farkındalığı',
+  tur: 'ic',
+  egitmen: 'Ayşe Yıldız',
+  planlananTarih: gunEkle(bugun, 21),
+  sureSaat: 3,
+  aciklama: 'Ölçüm cihazlarının izlenebilirliği ve kalibrasyon takvimi.',
+  katilimcilar: [{ id: saha }, { id: bakimci }],
+});
 
 const sayilar = {
   kullanici: db.prepare('SELECT COUNT(*) AS sayi FROM kullanicilar').get().sayi,

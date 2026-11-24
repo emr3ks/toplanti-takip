@@ -1,40 +1,203 @@
 <%- include('partials/ust', { aktifSayfa: 'egitim' }) %>
 
+<%
+  const ayAdlari = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  const egitimYetkisi = yetkiliMi('egitim');
+%>
+
 <div class="sayfa-bas">
   <div>
     <h1>Eğitim Yönetimi</h1>
-    <p>Kalite eğitimlerini planlayın, personelin eğitim kayıtlarını ve yeterliliklerini takip edin.</p>
+    <p>Yıllık eğitim planını görüntüleyin; eğitimleri, katılımcıları ve personelin eğitim sicilini tek yerden takip edin.</p>
   </div>
   <div class="sayfa-eylem">
-    <span class="rozet rozet-test">Yakında</span>
+    <a class="btn btn-hayalet" href="/egitim/personel">Personel Eğitim Sicili</a>
+    <% if (egitimYetkisi) { %>
+      <a class="btn btn-birincil" href="/egitim/yeni">+ Yeni Eğitim</a>
+    <% } %>
   </div>
 </div>
 
-<section class="kart egitim-yakinda">
-  <div class="egitim-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></div>
-  <h2>Eğitim modülü hazırlanıyor</h2>
-  <p>Bu modül QDMS yol haritasının sonraki fazında etkinleştirilecek. Planlanan yetenekler:</p>
-  <div class="egitim-plan">
-    <div class="egitim-plan-kart">
-      <strong>Eğitim Kataloğu</strong>
-      <span>Zorunlu ve isteğe bağlı eğitimleri tanımlayın, dokümanlarla ilişkilendirin.</span>
-    </div>
-    <div class="egitim-plan-kart">
-      <strong>Atama ve Takvim</strong>
-      <span>Departman bazında eğitim atayın, geçerlilik sürelerini izleyin.</span>
-    </div>
-    <div class="egitim-plan-kart">
-      <strong>Yeterlilik Takibi</strong>
-      <span>Katılım, sınav ve sertifika kayıtlarını personel bazında raporlayın.</span>
-    </div>
+<section class="istatistik-grid egitim-istatistik" aria-label="Yıllık eğitim özeti">
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.toplam %></strong>
+      <span><%= yil %> eğitimi</span>
+    </span>
   </div>
-  <div class="bilgi-kutu" style="max-width:620px;margin:18px auto 0;">
-    Bu sayfa şimdilik bir yer tutucudur. Doküman yönetimi, şablon tasarımı, onay akışı ve okuma takibi Faz 1 &amp; 2 kapsamında kullanıma açıktır.
+  <div class="stat">
+    <span class="stat-ikon amber"><%- include('partials/ikon', { ad: 'zil' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.planlanan %></strong>
+      <span>Planlanan</span>
+    </span>
   </div>
-  <div class="egitim-eylem">
-    <a class="btn btn-birincil" href="/dokumanlar">Doküman Yönetimine Git</a>
-    <a class="btn btn-hayalet" href="/">Dashboard</a>
+  <div class="stat">
+    <span class="stat-ikon yesil"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.tamamlanan %></strong>
+      <span>Tamamlanan</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon slate"><%- include('partials/ikon', { ad: 'organizasyon' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.katilimci %></strong>
+      <span>Toplam katılımcı</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon amber"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.katilimOrani === null ? '—' : ozet.katilimOrani + '%' %></strong>
+      <span>Katılım oranı</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.ortalamaPuan === null ? '—' : ozet.ortalamaPuan %></strong>
+      <span>Ortalama değerlendirme</span>
+    </span>
   </div>
 </section>
+
+<section class="kart egitim-yaklasan-kart">
+  <div class="kart-bas">
+    <div>
+      <h2>Yaklaşan Eğitimler</h2>
+      <p>Önümüzdeki 30 gün içinde planlanan eğitimler ve kalan süreler.</p>
+    </div>
+    <span class="rozet rozet-acik"><%= yaklasanlar.length %> eğitim</span>
+  </div>
+  <% if (yaklasanlar.length) { %>
+    <div class="egitim-yaklasan-listesi">
+      <% yaklasanlar.forEach(function (egitim) { %>
+        <%
+          const kalan = gunFarki(egitim.planlanan_tarih, bugunIso);
+          const kalanMetni = kalan === null ? '—' : (kalan === 0 ? 'Bugün' : kalan === 1 ? 'Yarın' : kalan + ' gün kaldı');
+          const parcalar = egitim.planlanan_tarih.split('-');
+        %>
+        <a class="egitim-yaklasan-satir" href="/egitim/<%= egitim.id %>">
+          <span class="egitim-yaklasan-tarih">
+            <strong><%= Number(parcalar[2]) %></strong>
+            <small><%= ayAdlari[Number(parcalar[1]) - 1] || parcalar[1] %> <%= parcalar[0] %></small>
+          </span>
+          <span class="egitim-yaklasan-govde">
+            <strong><%= egitim.ad %></strong>
+            <span><%= egitim.egitmen || 'Eğitmen belirtilmedi' %> · <%= EGITIM_TURLERI[egitim.tur] %> · <%= egitim.katilimci_sayisi %> katılımcı</span>
+          </span>
+          <span class="rozet <%= kalan !== null && kalan <= 7 ? 'rozet-beklemede' : 'rozet-acik' %>"><%= kalanMetni %></span>
+        </a>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p class="metin-kucuk metin-soluk egitim-bos-not">Önümüzdeki 30 gün içinde planlanmış eğitim yok.</p>
+  <% } %>
+</section>
+
+<div class="kart">
+  <div class="kart-bas">
+    <div>
+      <h2>Yıllık Eğitim Planı</h2>
+      <p><%= yil %> yılına ait eğitimler. Filtrelerle planı daraltabilirsiniz.</p>
+    </div>
+    <span class="rozet rozet-acik"><%= egitimler.length %> kayıt</span>
+  </div>
+
+  <form class="egitim-filtre" method="get" action="/egitim" data-otomatik-gonder>
+    <div class="alan">
+      <label for="egitim-yil">Yıl</label>
+      <select id="egitim-yil" name="yil">
+        <% yillar.forEach(function (deger) { %>
+          <option value="<%= deger %>" <%= deger === yil ? 'selected' : '' %>><%= deger %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan">
+      <label for="egitim-durum">Durum</label>
+      <select id="egitim-durum" name="durum">
+        <option value="hepsi" <%= durum === 'hepsi' ? 'selected' : '' %>>Tüm durumlar</option>
+        <% Object.keys(EGITIM_DURUMLARI).forEach(function (anahtar) { %>
+          <option value="<%= anahtar %>" <%= durum === anahtar ? 'selected' : '' %>><%= EGITIM_DURUMLARI[anahtar] %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan egitim-filtre-arama">
+      <label for="egitim-arama">Eğitim veya eğitmen ara</label>
+      <input class="girdi" type="search" id="egitim-arama" name="q" value="<%= arama %>" maxlength="100" placeholder="Örn. ISO 9001, Ayşe Yıldız…">
+    </div>
+    <div class="egitim-filtre-eylem">
+      <button class="btn btn-ikincil" type="submit">Filtrele</button>
+      <% if (arama || durum !== 'hepsi') { %>
+        <a class="btn btn-hayalet" href="/egitim?yil=<%= yil %>">Temizle</a>
+      <% } %>
+    </div>
+  </form>
+
+  <% if (egitimler.length) { %>
+    <div class="tablo-sarmal egitim-tablo-sarmal">
+      <table class="tablo egitim-tablo">
+        <thead>
+          <tr>
+            <th>Eğitim</th>
+            <th>Tür</th>
+            <th>Tarih</th>
+            <th>Eğitmen</th>
+            <th>Süre</th>
+            <th>İlgili Doküman</th>
+            <th>Katılımcı</th>
+            <th>Durum</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% egitimler.forEach(function (egitim) { %>
+            <tr>
+              <td>
+                <a class="egitim-ad-link" href="/egitim/<%= egitim.id %>"><strong><%= egitim.ad %></strong></a>
+                <% if (egitim.aciklama) { %><span class="egitim-alt-not metin-kucuk metin-soluk"><%= kisaMetin(egitim.aciklama, 70) %></span><% } %>
+              </td>
+              <td><span class="rozet egitim-tur-<%= egitim.tur %>"><%= EGITIM_TURLERI[egitim.tur] %></span></td>
+              <td class="mono"><%= tarihTr(egitim.planlanan_tarih) %></td>
+              <td><%= egitim.egitmen || '—' %></td>
+              <td><%= egitim.sure_saat %> saat</td>
+              <td>
+                <% if (egitim.dokuman_kod) { %>
+                  <a class="egitim-dokuman-link" href="/dokumanlar/<%= egitim.dokuman_id %>" title="<%= egitim.dokuman_baslik %>">
+                    <span class="mono"><%= egitim.dokuman_kod %></span>
+                  </a>
+                <% } else { %>
+                  <span class="metin-soluk">—</span>
+                <% } %>
+              </td>
+              <td>
+                <span class="egitim-katilim-orani" title="<%= egitim.katilan_sayisi %> katıldı / <%= egitim.katilimci_sayisi %> toplam">
+                  <strong><%= egitim.katilan_sayisi %></strong>/<%= egitim.katilimci_sayisi %>
+                </span>
+              </td>
+              <td><span class="rozet <%= egitimDurumSinifi(egitim.durum) %>"><%= EGITIM_DURUMLARI[egitim.durum] %></span></td>
+              <td><a class="btn btn-kucuk btn-hayalet" href="/egitim/<%= egitim.id %>">Detay</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p class="metin-kucuk metin-soluk liste-alt-not">
+      <%= egitimler.length %> eğitim listeleniyor.
+      <% if (arama) { %>“<%= arama %>” aramasına göre.<% } %>
+    </p>
+  <% } else { %>
+    <div class="bos">
+      <div class="bos-ikon"><%- include('partials/ikon', { ad: 'egitim' }) %></div>
+      <h3>Bu filtrelerde eğitim bulunamadı</h3>
+      <p><%= yil %> yılı için seçilen kriterlere uyan eğitim yok. Filtreleri temizleyip yeniden deneyin.</p>
+      <% if (egitimYetkisi) { %>
+        <a class="btn btn-birincil" href="/egitim/yeni">+ Yeni Eğitim</a>
+      <% } %>
+    </div>
+  <% } %>
+</div>
 
 <%- include('partials/alt') %>

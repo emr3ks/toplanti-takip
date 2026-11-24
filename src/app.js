@@ -34,7 +34,8 @@ const {
 } = require('./emails');
 const auth = require('./auth');
 const qdms = require('./qdms');
-const { pdfUret } = require('./pdf');
+const { pdfUret, logoVerisiCoz } = require('./pdf');
+const bildirimler = require('./bildirimler');
 
 const SAYFA_ADLARI = Object.freeze({
   dashboard: 'Genel Bakış',
@@ -42,6 +43,10 @@ const SAYFA_ADLARI = Object.freeze({
   'dokuman-yeni': 'Yeni Doküman',
   sablonlar: 'Doküman Şablon Tasarımcısı',
   egitim: 'Eğitim Yönetimi',
+  'egitim-yeni': 'Yeni Eğitim',
+  'egitim-detay': 'Eğitim Detayı',
+  'egitim-personel': 'Personel Eğitim Sicili',
+  raporlar: 'Raporlar',
   organizasyon: 'Organizasyon ve Kullanıcılar',
   emailler: 'E-posta Günlüğü',
   ayarlar: 'Sistem Ayarları',
@@ -157,8 +162,8 @@ function createApp({ db, config, mailService = null }) {
     fileFilter(req, file, geri) {
       const uzanti = path.extname(file.originalname || '').toLowerCase();
       if (file.fieldname === 'logo') {
-        if (['.png', '.jpg', '.jpeg', '.webp'].includes(uzanti)) return geri(null, true);
-        return geri(new Error('Logo için yalnızca PNG, JPG veya WEBP dosyası yükleyin.'));
+        if (['.png', '.jpg', '.jpeg'].includes(uzanti)) return geri(null, true);
+        return geri(new Error('Logo için yalnızca PNG veya JPG dosyası yükleyin.'));
       }
       if (file.fieldname === 'dosya') {
         if (['.pdf', '.xls', '.xlsx'].includes(uzanti)) return geri(null, true);
@@ -406,6 +411,38 @@ function createApp({ db, config, mailService = null }) {
     return dosyaYolu(logoKok, sirketAyarlari(db).logo);
   }
 
+  /** PDF motoruna yol yerine doğrudan Buffer verir; yol/encoding sorunlarını eler. */
+  function logoPdfGirdisi(sablon) {
+    const tam = sablonLogoYolu(sablon) || sirketLogoYolu();
+    if (!tam) return null;
+    try {
+      return fs.readFileSync(tam);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Yüklenen dosyanın gerçekten PDFKit'in çözebileceği PNG/JPG olduğunu doğrular. */
+  function logoDosyasiGecerliMi(tamYol) {
+    if (!tamYol) return false;
+    try {
+      return Boolean(logoVerisiCoz(tamYol));
+    } catch {
+      return false;
+    }
+  }
+
+  function logoUyariMetni(ad, tamYol) {
+    if (!ad) return '';
+    if (!tamYol) {
+      return 'Kayıtlı logo dosyası diskte bulunamadı; lütfen logoyu yeniden yükleyin.';
+    }
+    if (!logoDosyasiGecerliMi(tamYol)) {
+      return 'Kayıtlı logo PDF antetine basılamıyor (desteklenmeyen veya bozuk dosya). Lütfen PNG ya da JPG olarak yeniden yükleyin.';
+    }
+    return '';
+  }
+
   function icerikDogrula(bolumler, body) {
     const sonuc = [];
     let toplam = 0;
@@ -460,6 +497,20 @@ function createApp({ db, config, mailService = null }) {
 
   function yonlendir(res, yol, anahtar, mesaj) {
     return res.redirect(303, mesajliYol(yol, anahtar, mesaj));
+  }
+
+  /**
+   * Logo yükleme hatalarını (yanlış uzantı, 10 MB aşımı) 500 yerine
+   * kullanıcıyı bilgilendiren bir yönlendirmeye çevirir.
+   */
+  function logoYukleyici(req, res, next) {
+    yukleyici.single('logo')(req, res, (hata) => {
+      if (!hata) return next();
+      const geri = req.path.startsWith('/sablonlar/') ? req.path : '/ayarlar';
+      const mesaj =
+        hata.code === 'LIMIT_FILE_SIZE' ? 'Logo dosyası 10 MB sınırını aşıyor.' : hata.message;
+      return yonlendir(res, geri, 'hata', mesaj);
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -939,7 +990,7 @@ function createApp({ db, config, mailService = null }) {
     }
   );
 
-  app.post('/dokumanlar/:id/onaya-gonder', (req, res) => {
+  app.post('/dokumanlar/:id/onaya-gonder', async (req, res) => {
     const id = kimlik(req.params.id);
     const dokuman = id ? dokumanGetir(id) : null;
     if (!dokuman || !dokumanErisimiVar(req.kullanici, dokuman)) return dokumanYok(res);
@@ -968,10 +1019,27 @@ function createApp({ db, config, mailService = null }) {
       console.error('[onaya gönderme]', hata);
       return yonlendir(res, `/dokumanlar/${dokuman.id}`, 'hata', 'Doküman onaya gönderilemedi.');
     }
-    return yonlendir(res, `/dokumanlar/${dokuman.id}`, 'ok', 'Doküman onaya gönderildi.');
+    let epostaAdet = 0;
+    try {
+      const epostaSonuc = await bildirimler.onayBekleyenleriBilgilendir({
+        db,
+        mail,
+        config,
+        dokuman: { ...dokuman, durum: 'kontrol' },
+        gonderenId: req.kullanici.id,
+      });
+      epostaAdet = epostaSonuc.gonderilen;
+    } catch (hata) {
+      console.error('[onay e-postası]', hata);
+    }
+    const mesaj =
+      epostaAdet > 0
+        ? `Doküman onaya gönderildi. ${epostaAdet} onaylayana e-posta gönderildi.`
+        : 'Doküman onaya gönderildi.';
+    return yonlendir(res, `/dokumanlar/${dokuman.id}`, 'ok', mesaj);
   });
 
-  app.post('/dokumanlar/:id/onayla', auth.izinGerekli('dokuman.onayla'), (req, res) => {
+  app.post('/dokumanlar/:id/onayla', auth.izinGerekli('dokuman.onayla'), async (req, res) => {
     const id = kimlik(req.params.id);
     const dokuman = id ? dokumanGetir(id) : null;
     if (!dokuman) return dokumanYok(res);
@@ -981,6 +1049,7 @@ function createApp({ db, config, mailService = null }) {
     const simdi = new Date().toISOString();
     db.exec('BEGIN IMMEDIATE');
     let yeniOkuyucu = 0;
+    let guncel = null;
     try {
       db.prepare(
         `UPDATE dokumanlar
@@ -988,7 +1057,7 @@ function createApp({ db, config, mailService = null }) {
          WHERE id = ?`
       ).run(req.kullanici.id, simdi, simdi, simdi, dokuman.id);
       onayKaydet(dokuman.id, req.kullanici.id, 'onayla', metin(req.body.not_metni));
-      const guncel = dokumanGetir(dokuman.id);
+      guncel = dokumanGetir(dokuman.id);
       yeniOkuyucu = dagitimiBaslat(guncel);
       if (guncel.hazirlayan_id && guncel.hazirlayan_id !== req.kullanici.id) {
         bildirimEkle(
@@ -1006,12 +1075,19 @@ function createApp({ db, config, mailService = null }) {
       console.error('[doküman onaylama]', hata);
       return yonlendir(res, `/dokumanlar/${dokuman.id}`, 'hata', 'Doküman onaylanamadı.');
     }
-    return yonlendir(
-      res,
-      `/dokumanlar/${dokuman.id}`,
-      'ok',
-      `Doküman yayınlandı ve ${yeniOkuyucu} kişiye okuma bildirimi gönderildi.`
-    );
+    let epostaAdet = 0;
+    if (guncel) {
+      try {
+        const epostaSonuc = await bildirimler.yayinBilgileriniGonder({ db, mail, config, dokuman: guncel });
+        epostaAdet = epostaSonuc.gonderilen;
+      } catch (hata) {
+        console.error('[yayın e-postası]', hata);
+      }
+    }
+    const mesaj =
+      `Doküman yayınlandı ve ${yeniOkuyucu} kişiye okuma bildirimi gönderildi.` +
+      (epostaAdet > 0 ? ` ${epostaAdet} kişiye e-posta gönderildi.` : '');
+    return yonlendir(res, `/dokumanlar/${dokuman.id}`, 'ok', mesaj);
   });
 
   app.post('/dokumanlar/:id/reddet', auth.izinGerekli('dokuman.onayla'), (req, res) => {
@@ -1211,6 +1287,7 @@ function createApp({ db, config, mailService = null }) {
         sirket,
         tur: qdms.turGetir(dokuman.tur_kod),
         logoYolu: sablonLogoYolu(sablon) || dosyaYolu(logoKok, sirket.logo),
+        logoVerisi: logoPdfGirdisi(sablon),
         hazirlayanAd: dokuman.hazirlayan_ad || '',
         onaylayanAd: dokuman.onaylayan_ad || '',
       });
@@ -1257,13 +1334,17 @@ function createApp({ db, config, mailService = null }) {
     const tur = qdms.turGetir(req.params.tur);
     if (!tur) return sayfaYok(res, 'sablonlar');
     const sablon = qdms.sablonGetir(db, tur.kod);
+    const sirket = sirketAyarlari(db);
     res.render('sablon-duzenle', {
       aktifSayfa: 'sablonlar',
       sayfaBaslik: `${tur.ad} Şablonu`,
       tur,
       sablon,
-      sirket: sirketAyarlari(db),
+      sirket,
       logoVar: Boolean(sablon.logo_yolu),
+      logoUyari: sablon.logo_yolu
+        ? logoUyariMetni(sablon.logo_yolu, sablonLogoYolu(sablon))
+        : '',
       kenarlikStilleri: [
         { deger: 'duz', ad: 'Düz çizgi' },
         { deger: 'kesikli', ad: 'Kesikli çizgi' },
@@ -1272,7 +1353,7 @@ function createApp({ db, config, mailService = null }) {
     });
   });
 
-  app.post('/sablonlar/:tur', auth.izinGerekli('sablon'), yukleyici.single('logo'), (req, res) => {
+  app.post('/sablonlar/:tur', auth.izinGerekli('sablon'), logoYukleyici, (req, res) => {
     const tur = qdms.turGetir(req.params.tur);
     if (!tur) return sayfaYok(res, 'sablonlar');
     const geri = `/sablonlar/${tur.kod}`;
@@ -1307,6 +1388,16 @@ function createApp({ db, config, mailService = null }) {
     }
     if (bolumler.length > 25) {
       return yonlendir(res, geri, 'hata', 'Bir şablonda en fazla 25 bölüm tanımlanabilir.');
+    }
+
+    if (req.file && !logoDosyasiGecerliMi(req.file.path)) {
+      dosyaSil(logoKok, req.file.filename);
+      return yonlendir(
+        res,
+        geri,
+        'hata',
+        'Yüklenen dosya geçerli bir PNG/JPG logo değil. Lütfen görseli PNG veya JPG olarak yükleyin.'
+      );
     }
 
     let logoYolu = sablon.logo_yolu;
@@ -1365,6 +1456,7 @@ function createApp({ db, config, mailService = null }) {
         sirket,
         tur,
         logoYolu: sablonLogoYolu(sablon) || dosyaYolu(logoKok, sirket.logo),
+        logoVerisi: logoPdfGirdisi(sablon),
         hazirlayanAd: 'Örnek Hazırlayan',
         onaylayanAd: '',
       });
@@ -1391,14 +1483,10 @@ function createApp({ db, config, mailService = null }) {
   });
 
   // -------------------------------------------------------------------------
-  // Eğitim (yer tutucu)
+  // Eğitim Yönetimi ve Kurumsal Raporlar (Faz 3)
   // -------------------------------------------------------------------------
-  app.get('/egitim', (req, res) => {
-    res.render('egitim', {
-      aktifSayfa: 'egitim',
-      sayfaBaslik: 'Eğitim Yönetimi',
-    });
-  });
+  require('./egitim-rotalari').egitimRotalariniKur(app, { db, auth, mail, config });
+  require('./rapor-rotalari').raporRotalariniKur(app, { db, auth, mail, config });
 
   // -------------------------------------------------------------------------
   // Organizasyon ve kullanıcılar
@@ -1563,20 +1651,32 @@ function createApp({ db, config, mailService = null }) {
   // -------------------------------------------------------------------------
   app.get('/ayarlar', auth.izinGerekli('sistem'), (req, res) => {
     const form = ayarlarFormu(db, config);
+    const sirket = sirketAyarlari(db);
+    const logoDosyasi = sirketLogoYolu();
     res.render('ayarlar', {
       aktifSayfa: 'ayarlar',
       sayfaBaslik: 'Sistem Ayarları',
       form,
-      sirket: sirketAyarlari(db),
+      sirket,
+      logoUyari: logoUyariMetni(sirket.logo, logoDosyasi),
       sonEmailler: db
         .prepare('SELECT * FROM email_kayitlari ORDER BY id DESC LIMIT 5')
         .all(),
     });
   });
 
-  app.post('/ayarlar/sirket', auth.izinGerekli('sistem'), yukleyici.single('logo'), (req, res) => {
+  app.post('/ayarlar/sirket', auth.izinGerekli('sistem'), logoYukleyici, (req, res) => {
     const eski = sirketAyarlari(db);
     try {
+      if (req.file && !logoDosyasiGecerliMi(req.file.path)) {
+        dosyaSil(logoKok, req.file.filename);
+        return yonlendir(
+          res,
+          '/ayarlar',
+          'hata',
+          'Yüklenen dosya geçerli bir PNG/JPG logo değil. Lütfen görseli PNG veya JPG olarak yükleyin.'
+        );
+      }
       let logo = undefined;
       if (req.file) {
         logo = req.file.filename;
@@ -1598,6 +1698,48 @@ function createApp({ db, config, mailService = null }) {
     const tam = sirketLogoYolu();
     if (!tam) return res.status(404).end();
     return res.sendFile(path.basename(tam), { root: logoKok });
+  });
+
+  // Şirket logosunun PDF antetinde nasıl basıldığını doğrudan gösteren önizleme.
+  app.get('/ayarlar/logo-onizleme', auth.izinGerekli('sistem'), async (req, res) => {
+    const sirket = sirketAyarlari(db);
+    const tur = qdms.turGetir('PR');
+    const sablon = qdms.sablonGetir(db, tur.kod);
+    const ornek = sablon.bolumler.map((bolum) => ({
+      baslik: bolum.baslik,
+      metin: bolum.ipucu || 'Logo önizlemesi için örnek bölüm metni.',
+    }));
+    try {
+      const pdf = await pdfUret({
+        dokuman: {
+          kod: 'PR-000',
+          baslik: 'Logo ve Antet Önizlemesi',
+          aciklama: 'Bu PDF, şirket logosunun antetteki görünümünü doğrulamak için üretilmiştir.',
+          revizyon: 0,
+          durum: 'taslak',
+          icerik: ornek,
+          olusturma_tarihi: new Date().toISOString(),
+        },
+        sablon,
+        sirket,
+        tur,
+        logoYolu: sirketLogoYolu(),
+        logoVerisi: logoPdfGirdisi(),
+        hazirlayanAd: req.kullanici.ad,
+        onaylayanAd: '',
+      });
+      res.set('Content-Type', 'application/pdf');
+      res.set('Cache-Control', 'no-store');
+      res.set('Content-Disposition', 'inline; filename="logo-onizleme.pdf"');
+      return res.send(pdf);
+    } catch (hata) {
+      console.error('[logo önizleme]', hata);
+      return res.status(500).render('hata', {
+        aktifSayfa: 'ayarlar',
+        sayfaBaslik: 'Önizleme Üretilemedi',
+        hataMesaji: 'Logo önizlemesi oluşturulamadı.',
+      });
+    }
   });
 
   app.post('/ayarlar', auth.izinGerekli('sistem'), (req, res) => {
