@@ -139,6 +139,37 @@
   </div>
 
   <div class="dikey">
+    <div class="kart dof-ozet-kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Açık ve Geciken DÖF'ler</h2>
+          <p>Düzeltici ve önleyici faaliyetlerin güncel durumu.</p>
+        </div>
+        <a class="btn btn-kucuk btn-hayalet" href="/dof">Tümü</a>
+      </div>
+      <div class="dof-ozet-grid" aria-label="DÖF özeti">
+        <a class="dof-ozet-hucre" href="/dof">
+          <strong><%= dofOzet.acik %></strong>
+          <span>Açık DÖF</span>
+        </a>
+        <a class="dof-ozet-hucre geciken" href="/dof?geciken=1">
+          <strong><%= dofOzet.geciken %></strong>
+          <span>Geciken DÖF</span>
+        </a>
+        <a class="dof-ozet-hucre" href="/dof?durum=etkinlik_bekliyor">
+          <strong><%= dofOzet.etkinlik %></strong>
+          <span>Etkinlik bekliyor</span>
+        </a>
+        <a class="dof-ozet-hucre" href="/dof?durum=kapandi">
+          <strong><%= dofOzet.kapandi %></strong>
+          <span>Kapanan</span>
+        </a>
+      </div>
+      <% if (dofOzet.geciken) { %>
+        <p class="dof-ozet-uyari">Hedef tarihi geçmiş aksiyonlar geciken olarak işaretlenir.</p>
+      <% } %>
+    </div>
+
     <div class="kart">
       <div class="kart-bas">
         <div>

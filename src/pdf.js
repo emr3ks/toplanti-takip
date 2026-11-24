@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const PDFDocument = require('pdfkit');
 const { tarihTr } = require('./dates');
+const dofSabitleri = require('./dof');
 
 const A4 = { genislik: 595.28, yukseklik: 841.89 };
 const KENAR = { sol: 48, sag: 48, ust: 165, alt: 118 };
@@ -599,4 +600,554 @@ function pdfUret({
   });
 }
 
-module.exports = { pdfUret, logoVerisiCoz, turkceAscii, renkGecerliMi };
+/**
+ * Antetli Düzeltici / Önleyici Faaliyet (DÖF) raporu üretir.
+ *
+ * Rapor; şirket logosu ve antetini, DÖF künyesini, uygunsuzluk tanımını,
+ * acil önlemi, kök neden analizini, aksiyon tablosunu ve etkinlik
+ * değerlendirmesi / kapanış onayını içerir. Aksiyon tablosu sayfa sonunda
+ * bölünebilir; her yeni sayfada antet yeniden basılır.
+ */
+function dofPdfUret({
+  dof,
+  aksiyonlar = [],
+  sirket,
+  logoYolu = null,
+  logoVerisi = null,
+  bugun = null,
+  olusturanAd = '',
+  kapatanAd = '',
+}) {
+  return new Promise((resolve, reject) => {
+    const kayit = dof && typeof dof === 'object' ? dof : {};
+    const dofRengi = '#b91c1c';
+    let doc;
+    try {
+      doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: KENAR.ust, bottom: KENAR.alt, left: KENAR.sol, right: KENAR.sag },
+        bufferPages: true,
+        info: {
+          Title: `${kayit.kod || ''} DÖF Raporu`.trim(),
+          Author: sirket?.ad || 'Kalite Yönetim Sistemi',
+          Subject: 'Düzeltici ve Önleyici Faaliyet Raporu',
+        },
+      });
+    } catch (hata) {
+      reject(hata);
+      return;
+    }
+
+    if (NORMAL_YOL) doc.registerFont('govde', NORMAL_YOL);
+    if (KALIN_YOL) doc.registerFont('kalin', KALIN_YOL);
+    const govde = NORMAL_YOL ? 'govde' : 'Helvetica';
+    const kalin = KALIN_YOL ? 'kalin' : 'Helvetica-Bold';
+
+    const parcalar = [];
+    doc.on('data', (parca) => parcalar.push(parca));
+    doc.on('end', () => resolve(Buffer.concat(parcalar)));
+    doc.on('error', reject);
+
+    const sirketAdi = sirket?.ad || 'Kurumsal Kalite Yönetim Sistemi';
+    const logoKaynagi =
+      logoVerisi !== null && logoVerisi !== undefined && logoVerisi !== ''
+        ? logoVerisi
+        : logoYolu;
+    const logo = logoKaynagi ? logoVerisiCoz(logoKaynagi) : null;
+
+    const turMetni = dofSabitleri.turEtiketi(kayit.tur);
+    const durumMetni = dofSabitleri.durumEtiketi(kayit.durum);
+    const kaynakMetni = dofSabitleri.kaynakEtiketi(kayit.kaynak);
+    const liste = (Array.isArray(aksiyonlar) ? aksiyonlar : []).map((aksiyon, indeks) => {
+      const etkin = aksiyon.etkin_durum || dofSabitleri.aksiyonEtkinDurum(aksiyon, bugun);
+      return {
+        ...aksiyon,
+        sira: Number(aksiyon.sira) || indeks + 1,
+        etkin_durum: etkin,
+        etkin_durum_etiketi:
+          aksiyon.etkin_durum_etiketi || dofSabitleri.aksiyonDurumEtiketi(etkin),
+      };
+    });
+
+    const icerikAltSinir = () => A4.yukseklik - KENAR.alt;
+
+    function yeniSayfa() {
+      doc.addPage();
+      doc.y = KENAR.ust;
+      doc.x = KENAR.sol;
+    }
+
+    function yerVarMi(gerekli) {
+      return doc.y + gerekli <= icerikAltSinir();
+    }
+
+    function boslukAyir(gerekli) {
+      if (!yerVarMi(gerekli)) yeniSayfa();
+    }
+
+    function antetCiz() {
+      const x = KENAR.sol;
+      const ust = 34;
+      doc.rect(x, ust, ICERIK_GENISLIK, 5).fillColor(dofRengi).fill();
+
+      const logoKutuY = ust + 14;
+      if (logo) {
+        const icX = x + LOGO_KUTU.icBosluk;
+        const icY = logoKutuY + LOGO_KUTU.icBosluk;
+        const icGenislik = LOGO_KUTU.genislik - LOGO_KUTU.icBosluk * 2;
+        const icYukseklik = LOGO_KUTU.yukseklik - LOGO_KUTU.icBosluk * 2;
+        doc.save();
+        doc.rect(x, logoKutuY, LOGO_KUTU.genislik, LOGO_KUTU.yukseklik).fillColor('#ffffff').fill();
+        let gorselCizildi = false;
+        try {
+          doc.image(logo.veri, icX, icY, {
+            fit: [icGenislik, icYukseklik],
+            align: 'center',
+            valign: 'center',
+          });
+          gorselCizildi = true;
+        } catch (hata) {
+          logoUyar(`DÖF raporu görseli çizilemedi (${hata.message}).`);
+        }
+        if (gorselCizildi) {
+          doc
+            .lineWidth(0.8)
+            .strokeColor(dofRengi)
+            .rect(x, logoKutuY, LOGO_KUTU.genislik, LOGO_KUTU.yukseklik)
+            .stroke();
+        }
+        doc.restore();
+      }
+
+      const sirketX = logo ? x + LOGO_KUTU.genislik + 12 : x;
+      const sirketGenislik = logo ? ICERIK_GENISLIK - LOGO_KUTU.genislik - 12 : ICERIK_GENISLIK;
+      doc.fillColor('#0f172a').font(kalin).fontSize(13.5);
+      doc.text(
+        logo ? metniSigdir(doc, yazi(sirketAdi), sirketGenislik) : yazi(sirketAdi),
+        sirketX,
+        ust + 14,
+        { width: sirketGenislik, align: 'right' }
+      );
+      doc
+        .font(govde)
+        .fontSize(8)
+        .fillColor('#64748b')
+        .text(yazi('Düzeltici ve Önleyici Faaliyet Formu'), sirketX, ust + 33, {
+          width: sirketGenislik,
+          align: 'right',
+        });
+
+      const tabloY = ust + 70;
+      const hucreGenislik = ICERIK_GENISLIK / 4;
+      const etiketler = ['DÖF No', 'Tür', 'Durum', 'Tespit Tarihi'];
+      const degerler = [kayit.kod || '—', turMetni, durumMetni, tarihMetni(kayit.tespit_tarihi)];
+      doc.rect(x, tabloY, ICERIK_GENISLIK, 40).fillColor(dofRengi).fill();
+      etiketler.forEach((etiket, indeks) => {
+        const hucreX = x + indeks * hucreGenislik;
+        doc
+          .fillColor('#ffffff')
+          .font(govde)
+          .fontSize(6.5)
+          .text(yazi(etiket.toLocaleUpperCase('tr-TR')), hucreX + 7, tabloY + 6, {
+            width: hucreGenislik - 12,
+            lineBreak: false,
+          });
+        doc
+          .font(kalin)
+          .fontSize(8.2)
+          .text(yazi(degerler[indeks]), hucreX + 7, tabloY + 16, {
+            width: hucreGenislik - 14,
+            height: 20,
+            lineGap: 0.5,
+          });
+      });
+      doc.strokeColor(dofRengi).lineWidth(0.8).rect(x, tabloY, ICERIK_GENISLIK, 40).stroke();
+
+      if (kayit.durum === 'kapandi') {
+        doc
+          .font(govde)
+          .fontSize(7.5)
+          .fillColor('#475569')
+          .text(
+            yazi(
+              `Kapatan: ${kapatanAd || kayit.kapatan_ad || '—'} · Kapanış Tarihi: ${tarihMetni(kayit.kapanis_tarihi)}`
+            ),
+            x,
+            tabloY + 44,
+            { width: ICERIK_GENISLIK, align: 'right', lineBreak: false }
+          );
+      }
+    }
+
+    antetCiz();
+    doc.on('pageAdded', () => {
+      antetCiz();
+      doc.y = KENAR.ust;
+      doc.x = KENAR.sol;
+    });
+
+    function bolumBasligi(baslik) {
+      boslukAyir(36);
+      const y = doc.y;
+      doc.rect(KENAR.sol, y + 1, 3.5, 14).fillColor(dofRengi).fill();
+      doc
+        .fillColor('#0f172a')
+        .font(kalin)
+        .fontSize(10.5)
+        .text(yazi(baslik), KENAR.sol + 10, y, { width: ICERIK_GENISLIK - 10 });
+      doc.moveDown(0.35);
+    }
+
+    function paragraf(metin, bosluk = 0.4) {
+      const deger = String(metin || '').trim();
+      if (!deger) {
+        doc
+          .font(govde)
+          .fontSize(9.5)
+          .fillColor('#94a3b8')
+          .text('—', KENAR.sol, doc.y, { width: ICERIK_GENISLIK });
+        doc.moveDown(bosluk);
+        return;
+      }
+      for (const satir of deger.split(/\r?\n/)) {
+        if (!satir.trim()) {
+          doc.moveDown(0.25);
+          continue;
+        }
+        doc.font(govde).fontSize(9.5);
+        const yukseklik = doc.heightOfString(yazi(satir), {
+          width: ICERIK_GENISLIK,
+          lineGap: 2,
+        });
+        if (!yerVarMi(yukseklik)) yeniSayfa();
+        doc
+          .fillColor('#1f2937')
+          .text(yazi(satir), KENAR.sol, doc.y, {
+            width: ICERIK_GENISLIK,
+            lineGap: 2,
+            align: 'left',
+          });
+        doc.moveDown(0.15);
+      }
+      doc.moveDown(bosluk);
+    }
+
+    function detayTablosu() {
+      const satirlar = [
+        [
+          ['Uygunsuzluk Kaynağı', kaynakMetni],
+          ['İlgili Departman', kayit.departman_ad || '—'],
+          ['Talep Eden', kayit.talep_eden || '—'],
+          ['İlgili Kalite Dokümanı', kayit.dokuman_kod || '—'],
+        ],
+        [
+          ['Oluşturan', olusturanAd || kayit.olusturan_ad || '—'],
+          ['Oluşturma Tarihi', tarihMetni(kayit.olusturma_tarihi)],
+          ['Kapanış Tarihi', kayit.kapanis_tarihi ? tarihMetni(kayit.kapanis_tarihi) : '—'],
+          ['Kapatan', kapatanAd || kayit.kapatan_ad || '—'],
+        ],
+      ];
+      const hucreGenislik = ICERIK_GENISLIK / 4;
+      const hucreYukseklik = 34;
+      boslukAyir(hucreYukseklik * 2 + 8);
+      let y = doc.y;
+      for (const satir of satirlar) {
+        satir.forEach(([etiket, deger], indeks) => {
+          const x = KENAR.sol + indeks * hucreGenislik;
+          doc
+            .rect(x, y, hucreGenislik, hucreYukseklik)
+            .fillColor(indeks % 2 === 0 ? '#f8fafc' : '#ffffff')
+            .fill();
+          doc
+            .strokeColor('#cbd5e1')
+            .lineWidth(0.6)
+            .rect(x, y, hucreGenislik, hucreYukseklik)
+            .stroke();
+          doc
+            .fillColor('#64748b')
+            .font(govde)
+            .fontSize(6.5)
+            .text(yazi(etiket.toLocaleUpperCase('tr-TR')), x + 6, y + 5, {
+              width: hucreGenislik - 12,
+              lineBreak: false,
+            });
+          doc.font(kalin).fontSize(8.5);
+          doc
+            .fillColor('#0f172a')
+            .text(
+              yazi(metniSigdir(doc, String(deger || '—'), hucreGenislik - 12)),
+              x + 6,
+              y + 16,
+              { width: hucreGenislik - 12, lineBreak: false }
+            );
+        });
+        y += hucreYukseklik;
+      }
+      doc.y = y + 10;
+    }
+
+    function aksiyonTablosu() {
+      const kolonlar = [
+        { genislik: 24 },
+        { genislik: 180 },
+        { genislik: 90 },
+        { genislik: 62 },
+        { genislik: 70 },
+        { genislik: 73.28 },
+      ];
+      const basliklar = ['No', 'Aksiyon', 'Sorumlu', 'Hedef Tarih', 'Durum', 'Kanıt / Açıklama'];
+
+      function baslikSatiri(y) {
+        let x = KENAR.sol;
+        doc.rect(x, y, ICERIK_GENISLIK, 20).fillColor(dofRengi).fill();
+        kolonlar.forEach((kolon, indeks) => {
+          doc
+            .fillColor('#ffffff')
+            .font(kalin)
+            .fontSize(7)
+            .text(yazi(basliklar[indeks]), x + 4, y + 6, {
+              width: kolon.genislik - 8,
+              lineBreak: false,
+            });
+          x += kolon.genislik;
+        });
+        doc
+          .strokeColor(dofRengi)
+          .lineWidth(0.6)
+          .rect(KENAR.sol, y, ICERIK_GENISLIK, 20)
+          .stroke();
+      }
+
+      boslukAyir(44);
+      let y = doc.y;
+      baslikSatiri(y);
+      y += 20;
+
+      if (!liste.length) {
+        doc
+          .fillColor('#94a3b8')
+          .font(govde)
+          .fontSize(9.5)
+          .text(yazi('Bu DÖF için henüz aksiyon tanımlanmamış.'), KENAR.sol, y + 6, {
+            width: ICERIK_GENISLIK,
+          });
+        doc.y = y + 24;
+        return;
+      }
+
+      liste.forEach((aksiyon) => {
+        const aksiyonMetni = String(aksiyon.aciklama || '—');
+        const sorumluMetni = String(aksiyon.sorumlu_ad || '—');
+        const durumMetniAksiyon = String(aksiyon.etkin_durum_etiketi || '—');
+        const kanitParcalari = [];
+        if (aksiyon.kanit_aciklama) kanitParcalari.push(aksiyon.kanit_aciklama);
+        if (aksiyon.kanit_dosya_adi) kanitParcalari.push(`Dosya: ${aksiyon.kanit_dosya_adi}`);
+        const kanitMetni = kanitParcalari.join('\n') || '—';
+
+        doc.font(govde).fontSize(7.6);
+        const yukseklik = Math.max(
+          doc.heightOfString(yazi(aksiyonMetni), { width: kolonlar[1].genislik - 8, lineGap: 1.5 }),
+          doc.heightOfString(yazi(sorumluMetni), { width: kolonlar[2].genislik - 8, lineGap: 1.5 }),
+          doc.heightOfString(yazi(durumMetniAksiyon), {
+            width: kolonlar[4].genislik - 8,
+            lineGap: 1.5,
+          }),
+          doc.heightOfString(yazi(kanitMetni), { width: kolonlar[5].genislik - 8, lineGap: 1.5 })
+        );
+        const satirYukseklik = Math.max(18, yukseklik + 8);
+
+        if (y + satirYukseklik > icerikAltSinir() - 6) {
+          yeniSayfa();
+          y = doc.y;
+          baslikSatiri(y);
+          y += 20;
+        }
+
+        const degerler = [
+          String(aksiyon.sira || ''),
+          aksiyonMetni,
+          sorumluMetni,
+          tarihMetni(aksiyon.hedef_tarih),
+          durumMetniAksiyon,
+          kanitMetni,
+        ];
+        let x = KENAR.sol;
+        kolonlar.forEach((kolon, indeks) => {
+          doc
+            .rect(x, y, kolon.genislik, satirYukseklik)
+            .fillColor(indeks % 2 === 0 ? '#ffffff' : '#f8fafc')
+            .fill();
+          doc
+            .strokeColor('#cbd5e1')
+            .lineWidth(0.5)
+            .rect(x, y, kolon.genislik, satirYukseklik)
+            .stroke();
+          doc
+            .fillColor('#1f2937')
+            .font(govde)
+            .fontSize(7.6)
+            .text(yazi(degerler[indeks]), x + 4, y + 4, {
+              width: kolon.genislik - 8,
+              lineGap: 1.5,
+            });
+          x += kolon.genislik;
+        });
+        y += satirYukseklik;
+      });
+
+      doc.y = y + 10;
+    }
+
+    function imzaKutulari() {
+      boslukAyir(60);
+      const kutuGenislik = (ICERIK_GENISLIK - 14) / 2;
+      const y = doc.y;
+      const kutular = [
+        {
+          etiket: "DÖF'Ü AÇAN / TALEP EDEN",
+          ad: olusturanAd || kayit.olusturan_ad || kayit.talep_eden || '—',
+          tarih: tarihMetni(kayit.olusturma_tarihi),
+        },
+        {
+          etiket: 'ETKİNLİK DEĞERLENDİRMESİ / KAPATAN',
+          ad: kapatanAd || kayit.kapatan_ad || (kayit.durum === 'kapandi' ? '—' : 'Bekliyor'),
+          tarih: kayit.kapanis_tarihi ? tarihMetni(kayit.kapanis_tarihi) : '—',
+        },
+      ];
+      kutular.forEach((kutu, indeks) => {
+        const x = KENAR.sol + indeks * (kutuGenislik + 14);
+        stilCiz(doc, x, y, kutuGenislik, 46, 'duz');
+        doc
+          .font(kalin)
+          .fontSize(7)
+          .fillColor('#334155')
+          .text(yazi(kutu.etiket), x + 8, y + 7, { width: kutuGenislik - 16 });
+        doc
+          .font(govde)
+          .fontSize(9)
+          .fillColor('#0f172a')
+          .text(yazi(kutu.ad), x + 8, y + 19, { width: kutuGenislik - 16, lineBreak: false });
+        doc
+          .font(govde)
+          .fontSize(7.5)
+          .fillColor('#64748b')
+          .text(yazi(kutu.tarih), x + 8, y + 31, { width: kutuGenislik - 16, lineBreak: false });
+      });
+      doc.y = y + 56;
+    }
+
+    // -----------------------------------------------------------------------
+    // Başlık
+    // -----------------------------------------------------------------------
+    doc
+      .fillColor('#0f172a')
+      .font(kalin)
+      .fontSize(16)
+      .text(yazi('DÖF RAPORU'), KENAR.sol, KENAR.ust + 6, {
+        width: ICERIK_GENISLIK,
+        align: 'center',
+      });
+    doc
+      .font(govde)
+      .fontSize(9)
+      .fillColor('#475569')
+      .text(yazi(`${kayit.kod || ''} · ${turMetni} · ${durumMetni}`), {
+        width: ICERIK_GENISLIK,
+        align: 'center',
+      });
+    doc.moveDown(0.7);
+    doc
+      .strokeColor('#e2e8f0')
+      .lineWidth(0.8)
+      .moveTo(KENAR.sol, doc.y)
+      .lineTo(KENAR.sol + ICERIK_GENISLIK, doc.y)
+      .stroke();
+    doc.moveDown(0.7);
+
+    // -----------------------------------------------------------------------
+    // İçerik
+    // -----------------------------------------------------------------------
+    bolumBasligi('DÖF BİLGİLERİ');
+    detayTablosu();
+
+    bolumBasligi('UYGUNSUZLUK TANIMI');
+    paragraf(kayit.uygunsuzluk_tanimi);
+
+    bolumBasligi('ACİL / GEÇİCİ ÖNLEM');
+    paragraf(kayit.acil_onlem);
+
+    bolumBasligi('KÖK NEDEN ANALİZİ');
+    paragraf(kayit.kok_neden);
+
+    bolumBasligi('DÜZELTİCİ / ÖNLEYİCİ AKSİYON PLANI');
+    aksiyonTablosu();
+
+    bolumBasligi('ETKİNLİK DEĞERLENDİRMESİ VE KAPANIŞ');
+    if (kayit.durum === 'kapandi') {
+      paragraf(kayit.etkinlik_degerlendirmesi);
+      doc
+        .font(govde)
+        .fontSize(8.5)
+        .fillColor('#475569')
+        .text(
+          yazi(
+            `Kapatan: ${kapatanAd || kayit.kapatan_ad || '—'} · Kapanış Tarihi: ${tarihMetni(kayit.kapanis_tarihi)}`
+          ),
+          KENAR.sol,
+          doc.y,
+          { width: ICERIK_GENISLIK }
+        );
+      doc.moveDown(0.8);
+    } else {
+      doc
+        .font(govde)
+        .fontSize(9)
+        .fillColor('#64748b')
+        .text(
+          yazi(
+            'DÖF henüz kapatılmadı. Tüm aksiyonlar tamamlandığında Kalite Yöneticisi etkinlik değerlendirmesini girerek kaydı kapatır.'
+          ),
+          KENAR.sol,
+          doc.y,
+          { width: ICERIK_GENISLIK }
+        );
+      doc.moveDown(0.8);
+    }
+    imzaKutulari();
+
+    // -----------------------------------------------------------------------
+    // Alt bilgi: sayfa numarası ve kayıt kodu
+    // -----------------------------------------------------------------------
+    const aralik = doc.bufferedPageRange();
+    const toplam = aralik.count;
+    for (let i = 0; i < toplam; i += 1) {
+      doc.switchToPage(i);
+      const sayfa = doc.page;
+      const eskiAltKenar = sayfa.margins.bottom;
+      sayfa.margins.bottom = 0;
+      doc
+        .font(govde)
+        .fontSize(8)
+        .fillColor('#64748b')
+        .text(yazi(`Sayfa ${i + 1}/${toplam}`), KENAR.sol, sayfa.height - 40, {
+          width: ICERIK_GENISLIK,
+          align: 'center',
+        });
+      doc
+        .font(govde)
+        .fontSize(6.8)
+        .fillColor('#94a3b8')
+        .text(
+          yazi(`${sirketAdi} · ${kayit.kod || ''} · ${turMetni}`),
+          KENAR.sol,
+          sayfa.height - 27,
+          { width: ICERIK_GENISLIK, align: 'center' }
+        );
+      sayfa.margins.bottom = eskiAltKenar;
+    }
+
+    doc.end();
+  });
+}
+
+module.exports = { pdfUret, dofPdfUret, logoVerisiCoz, turkceAscii, renkGecerliMi };

@@ -1,0 +1,414 @@
+<%- include('partials/ust', { aktifSayfa: 'dof' }) %>
+
+<%
+  const durumSirasi = ['acik', 'kok_neden', 'etkinlik_bekliyor', 'kapandi'];
+  const aktifIndeks = durumSirasi.indexOf(kayit.durum);
+  const duzenlenebilir = dofYetkisi && kayit.durum !== 'kapandi';
+  const tamamlanmaYuzdesi = aksiyonlar.length ? Math.round((tamamlananAksiyon / aksiyonlar.length) * 100) : 0;
+%>
+
+<div class="sayfa-bas dof-detay-bas">
+  <div>
+    <div class="dof-detay-ust">
+      <span class="rozet dof-tur-<%= kayit.tur %>"><%= DOF_TURLERI[kayit.tur] %></span>
+      <span class="rozet <%= dofDurumSinifi(kayit.durum) %>"><%= DOF_DURUMLARI[kayit.durum] %></span>
+      <span class="mono metin-soluk"><%= kayit.kod %></span>
+    </div>
+    <h1><%= kayit.kod %> · <%= kayit.talep_eden %></h1>
+    <p>
+      <%= tarihTr(kayit.tespit_tarihi) %>
+      · <%= kayit.departman_ad || 'Departman belirtilmedi' %>
+      · <%= DOF_KAYNAKLARI[kayit.kaynak] %>
+      <% if (kayit.dokuman_kod) { %> · <a href="/dokumanlar/<%= kayit.dokuman_id %>"><span class="mono"><%= kayit.dokuman_kod %></span></a><% } %>
+    </p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/dof">DÖF Listesine Dön</a>
+    <a class="btn btn-ikincil" href="/dof/<%= kayit.id %>/pdf" target="_blank" rel="noopener">PDF Önizle</a>
+    <a class="btn btn-birincil" href="/dof/<%= kayit.id %>/pdf?indir=1">PDF İndir</a>
+  </div>
+</div>
+
+<div class="iki-kolon dof-detay-kolonlar">
+  <div class="dikey">
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>DÖF Bilgileri</h2><p>Kaydın künyesi ve ilişkili kalite dokümanı.</p></div>
+        <span class="rozet <%= dofDurumSinifi(kayit.durum) %>"><%= DOF_DURUMLARI[kayit.durum] %></span>
+      </div>
+      <dl class="tanim-listesi dof-tanim-listesi">
+        <dt>Tür</dt><dd><span class="rozet dof-tur-<%= kayit.tur %>"><%= DOF_TURLERI[kayit.tur] %></span></dd>
+        <dt>Uygunsuzluk kaynağı</dt><dd><%= DOF_KAYNAKLARI[kayit.kaynak] %></dd>
+        <dt>İlgili departman</dt><dd><%= kayit.departman_ad || '—' %></dd>
+        <dt>Talep eden</dt><dd><%= kayit.talep_eden %></dd>
+        <dt>Tespit tarihi</dt><dd><%= tarihTr(kayit.tespit_tarihi) %></dd>
+        <dt>İlgili kalite dokümanı</dt>
+        <dd>
+          <% if (kayit.dokuman_kod) { %>
+            <a href="/dokumanlar/<%= kayit.dokuman_id %>"><span class="mono"><%= kayit.dokuman_kod %></span> · <%= kayit.dokuman_baslik %></a>
+          <% } else { %>
+            <span class="metin-soluk">—</span>
+          <% } %>
+        </dd>
+        <dt>Oluşturan</dt><dd><%= kayit.olusturan_ad || '—' %></dd>
+        <dt>Oluşturma</dt><dd><%= zamanTr(kayit.olusturma_tarihi) %></dd>
+        <dt>Son güncelleme</dt><dd><%= zamanTr(kayit.guncelleme_tarihi) %></dd>
+      </dl>
+
+      <% if (duzenlenebilir) { %>
+        <details class="dof-duzenle">
+          <summary>DÖF künyesini düzenle</summary>
+          <form method="post" action="/dof/<%= kayit.id %>" class="dof-guncelle-form">
+            <div class="form-grid">
+              <div class="alan">
+                <label for="duzenle-tur">Tür</label>
+                <select id="duzenle-tur" name="tur" required>
+                  <% DOF_TUR_ANAHTARLARI.forEach(function (anahtar) { %>
+                    <option value="<%= anahtar %>" <%= kayit.tur === anahtar ? 'selected' : '' %>><%= DOF_TURLERI[anahtar] %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="alan">
+                <label for="duzenle-kaynak">Uygunsuzluk kaynağı</label>
+                <select id="duzenle-kaynak" name="kaynak" required>
+                  <% DOF_KAYNAK_ANAHTARLARI.forEach(function (anahtar) { %>
+                    <option value="<%= anahtar %>" <%= kayit.kaynak === anahtar ? 'selected' : '' %>><%= DOF_KAYNAKLARI[anahtar] %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="alan">
+                <label for="duzenle-departman">İlgili departman</label>
+                <select id="duzenle-departman" name="departman_id" required>
+                  <% departmanlar.forEach(function (departman) { %>
+                    <option value="<%= departman.id %>" <%= Number(kayit.departman_id) === departman.id ? 'selected' : '' %>><%= departman.ad %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="alan">
+                <label for="duzenle-talep">Talep eden</label>
+                <input class="girdi" type="text" id="duzenle-talep" name="talep_eden" value="<%= kayit.talep_eden %>" minlength="2" maxlength="120" required>
+              </div>
+              <div class="alan">
+                <label for="duzenle-tespit">Tespit tarihi</label>
+                <input class="girdi" type="date" id="duzenle-tespit" name="tespit_tarihi" value="<%= kayit.tespit_tarihi %>" required>
+              </div>
+              <div class="alan">
+                <label for="duzenle-dokuman">İlgili kalite dokümanı</label>
+                <select id="duzenle-dokuman" name="dokuman_id">
+                  <option value="">— Doküman seçilmedi —</option>
+                  <% dokumanlar.forEach(function (dokuman) { %>
+                    <option value="<%= dokuman.id %>" <%= Number(kayit.dokuman_id) === dokuman.id ? 'selected' : '' %>>
+                      <%= dokuman.kod %> · <%= dokuman.baslik %><%= dokuman.durum === 'yayinda' ? '' : ' (arşiv)' %>
+                    </option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="alan tam">
+                <label for="duzenle-tanim">Uygunsuzluk tanımı</label>
+                <textarea id="duzenle-tanim" name="uygunsuzluk_tanimi" minlength="10" maxlength="5000" rows="4" required><%= kayit.uygunsuzluk_tanimi %></textarea>
+              </div>
+            </div>
+            <button class="btn btn-ikincil" type="submit">Künyeyi Kaydet</button>
+          </form>
+        </details>
+      <% } %>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Uygunsuzluk Tanımı</h2><p>Tespit edilen uygunsuzluğun kapsamı ve kanıtları.</p></div>
+      </div>
+      <div class="dof-metin-blok"><%= kayit.uygunsuzluk_tanimi %></div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Kök Neden Analizi ve Acil Önlem</h2>
+          <p>5 Neden / kök neden açıklaması ve uygunsuzluğun yayılmasını önleyen acil/geçici önlem.</p>
+        </div>
+        <span class="rozet <%= dofDurumSinifi(kayit.durum) %>"><%= DOF_DURUMLARI[kayit.durum] %></span>
+      </div>
+
+      <% if (duzenlenebilir) { %>
+        <form method="post" action="/dof/<%= kayit.id %>/kok-neden" class="dof-kok-neden-form">
+          <div class="alan tam">
+            <label for="dof-kok-neden">Kök neden analizi <span class="zorunlu-yazi">*</span></label>
+            <textarea id="dof-kok-neden" name="kok_neden" minlength="10" maxlength="5000" rows="6" required placeholder="5 Neden tekniğiyle kök nedeni açıklayın…"><%= kayit.kok_neden %></textarea>
+            <span class="ipucu">10-5000 karakter. Kaydedildiğinde DÖF “Kök Neden &amp; Aksiyon Aşamasında” durumuna geçer.</span>
+          </div>
+          <div class="alan tam">
+            <label for="dof-acil-onlem">Acil / geçici önlem</label>
+            <textarea id="dof-acil-onlem" name="acil_onlem" maxlength="5000" rows="3" placeholder="Uygunsuzluğun etkisini sınırlamak için alınan acil önlemler…"><%= kayit.acil_onlem %></textarea>
+            <span class="ipucu">İsteğe bağlı, en fazla 5000 karakter.</span>
+          </div>
+          <button class="btn btn-ikincil" type="submit">Kök Neden ve Önlemi Kaydet</button>
+        </form>
+      <% } else { %>
+        <div class="dof-iki-blok">
+          <div>
+            <strong>Kök neden analizi</strong>
+            <div class="dof-metin-blok"><%= kayit.kok_neden || '—' %></div>
+          </div>
+          <div>
+            <strong>Acil / geçici önlem</strong>
+            <div class="dof-metin-blok"><%= kayit.acil_onlem || '—' %></div>
+          </div>
+        </div>
+      <% } %>
+    </section>
+  </div>
+
+  <aside class="dikey">
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Durum Akışı</h2><p>DÖF'ün izlediği dört aşamalı akış.</p></div>
+      </div>
+      <ol class="dof-akis">
+        <% durumSirasi.forEach(function (adim, indeks) { %>
+          <li class="<%= indeks < aktifIndeks ? 'tamam' : (indeks === aktifIndeks ? 'aktif' : '') %>">
+            <span class="dof-akis-nokta"><%= indeks < aktifIndeks ? '✓' : indeks + 1 %></span>
+            <span class="dof-akis-etiket"><%= DOF_DURUMLARI[adim] %></span>
+          </li>
+        <% }) %>
+      </ol>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Aksiyon Özeti</h2><p>Planın güncel gerçekleşme durumu.</p></div>
+      </div>
+      <div class="dof-ozet-grid dof-ozet-grid-kucuk">
+        <div class="dof-ozet-hucre">
+          <strong><%= aksiyonlar.length %></strong>
+          <span>Toplam aksiyon</span>
+        </div>
+        <div class="dof-ozet-hucre">
+          <strong><%= tamamlananAksiyon %></strong>
+          <span>Tamamlanan</span>
+        </div>
+        <div class="dof-ozet-hucre geciken">
+          <strong><%= gecikenAksiyon %></strong>
+          <span>Geciken</span>
+        </div>
+        <div class="dof-ozet-hucre">
+          <strong><%= tamamlanmaYuzdesi %>%</strong>
+          <span>Tamamlanma</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>İlişkili Kayıtlar</h2><p>DÖF ile bağlantılı kişi ve belgeler.</p></div>
+      </div>
+      <dl class="tanim-listesi dof-tanim-listesi">
+        <dt>İlgili doküman</dt>
+        <dd>
+          <% if (kayit.dokuman_kod) { %>
+            <a href="/dokumanlar/<%= kayit.dokuman_id %>"><span class="mono"><%= kayit.dokuman_kod %></span> · <%= kayit.dokuman_baslik %></a>
+          <% } else { %>
+            <span class="metin-soluk">—</span>
+          <% } %>
+        </dd>
+        <dt>Oluşturan</dt><dd><%= kayit.olusturan_ad || '—' %></dd>
+        <dt>Son güncelleme</dt><dd><%= zamanTr(kayit.guncelleme_tarihi) %></dd>
+        <dt>Kapanış</dt><dd><%= kayit.kapanis_tarihi ? zamanTr(kayit.kapanis_tarihi) : 'Henüz kapanmadı' %></dd>
+      </dl>
+    </section>
+  </aside>
+</div>
+
+<section class="kart dof-aksiyon-kart">
+  <div class="kart-bas">
+    <div>
+      <h2>Aksiyon Planı</h2>
+      <p>Her aksiyon için sorumlu personel, hedef tarih, durum ve kanıt bilgisi. Sorumlu personel kendi aksiyonunun durumunu güncelleyebilir.</p>
+    </div>
+    <span class="rozet rozet-acik"><%= tamamlananAksiyon %>/<%= aksiyonlar.length %> tamamlandı</span>
+  </div>
+
+  <% if (aksiyonlar.length) { %>
+    <div class="tablo-sarmal dof-aksiyon-sarmal">
+      <table class="tablo dof-aksiyon-tablo">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Aksiyon</th>
+            <th>Sorumlu</th>
+            <th>Hedef Tarih</th>
+            <th>Durum</th>
+            <th>Kanıt / Açıklama</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% aksiyonlar.forEach(function (aksiyon) {
+               const satirDuzenlenebilir = kayit.durum !== 'kapandi' && (dofYetkisi || kendiAksiyonlari.has(aksiyon.id));
+          %>
+            <tr class="<%= aksiyon.gecikti ? 'dof-aksiyon-gecikmis-satir' : '' %>">
+              <td class="mono"><%= aksiyon.sira %></td>
+              <td class="dof-aksiyon-aciklama">
+                <% if (satirDuzenlenebilir && dofYetkisi) { %>
+                  <textarea class="girdi" form="aksiyon-form-<%= aksiyon.id %>" name="aciklama" rows="2" maxlength="800" required aria-label="<%= aksiyon.sira %>. aksiyon açıklaması"><%= aksiyon.aciklama %></textarea>
+                <% } else { %>
+                  <span><%= aksiyon.aciklama %></span>
+                <% } %>
+                <% if (aksiyon.tamamlanma_tarihi) { %>
+                  <small class="metin-kucuk metin-soluk">Tamamlandı: <%= zamanTr(aksiyon.tamamlanma_tarihi) %></small>
+                <% } %>
+              </td>
+              <td>
+                <% if (satirDuzenlenebilir && dofYetkisi) { %>
+                  <select form="aksiyon-form-<%= aksiyon.id %>" name="sorumlu_id" aria-label="<%= aksiyon.sira %>. aksiyon sorumlusu">
+                    <% kullanicilar.forEach(function (kisi) { %>
+                      <option value="<%= kisi.id %>" <%= Number(aksiyon.sorumlu_id) === kisi.id ? 'selected' : '' %>><%= kisi.ad %><%= kisi.departman_ad ? ' · ' + kisi.departman_ad : '' %></option>
+                    <% }) %>
+                  </select>
+                <% } else { %>
+                  <%= aksiyon.sorumlu_ad || '—' %>
+                <% } %>
+              </td>
+              <td>
+                <% if (satirDuzenlenebilir && dofYetkisi) { %>
+                  <input class="girdi dof-tarih-girdi" type="date" form="aksiyon-form-<%= aksiyon.id %>" name="hedef_tarih" value="<%= aksiyon.hedef_tarih %>" required aria-label="<%= aksiyon.sira %>. aksiyon hedef tarihi">
+                <% } else { %>
+                  <span class="mono"><%= tarihTr(aksiyon.hedef_tarih) %></span>
+                <% } %>
+              </td>
+              <td>
+                <% if (satirDuzenlenebilir) { %>
+                  <select form="aksiyon-form-<%= aksiyon.id %>" name="durum" aria-label="<%= aksiyon.sira %>. aksiyon durumu">
+                    <% DOF_AKSIYON_DURUM_ANAHTARLARI.forEach(function (anahtar) { %>
+                      <option value="<%= anahtar %>" <%= aksiyon.durum === anahtar ? 'selected' : '' %>><%= DOF_AKSIYON_DURUMLARI[anahtar] %></option>
+                    <% }) %>
+                  </select>
+                  <% if (aksiyon.gecikti && aksiyon.durum !== 'tamamlandi') { %>
+                    <span class="rozet dof-aksiyon-gecikti">Geciken</span>
+                  <% } %>
+                <% } else { %>
+                  <span class="rozet <%= aksiyon.etkin_durum_sinifi %>"><%= aksiyon.etkin_durum_etiketi %></span>
+                <% } %>
+              </td>
+              <td class="dof-kanit-hucre">
+                <% if (aksiyon.kanit_dosya) { %>
+                  <a class="dof-kanit-link" href="/dof/<%= kayit.id %>/aksiyonlar/<%= aksiyon.id %>/kanit">
+                    <%- include('partials/ikon', { ad: 'pdf' }) %>
+                    <span><%= kisaMetin(aksiyon.kanit_dosya_adi || 'Kanıt dosyası', 28) %></span>
+                  </a>
+                <% } %>
+                <% if (satirDuzenlenebilir) { %>
+                  <input class="girdi" form="aksiyon-form-<%= aksiyon.id %>" type="text" name="kanit_aciklama" value="<%= aksiyon.kanit_aciklama %>" maxlength="500" placeholder="Kanıt açıklaması…" aria-label="<%= aksiyon.sira %>. aksiyon kanıt açıklaması">
+                  <label class="dof-dosya-sec">
+                    <input type="file" form="aksiyon-form-<%= aksiyon.id %>" name="kanit" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt">
+                    <span>Kanıt dosyası seç</span>
+                  </label>
+                <% } else if (aksiyon.kanit_aciklama) { %>
+                  <span class="metin-kucuk"><%= aksiyon.kanit_aciklama %></span>
+                <% } %>
+              </td>
+              <td>
+                <% if (satirDuzenlenebilir) { %>
+                  <button class="btn btn-kucuk btn-birincil" type="submit" form="aksiyon-form-<%= aksiyon.id %>">Kaydet</button>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% aksiyonlar.forEach(function (aksiyon) { if (kayit.durum !== 'kapandi' && (dofYetkisi || kendiAksiyonlari.has(aksiyon.id))) { %>
+      <form id="aksiyon-form-<%= aksiyon.id %>" method="post" enctype="multipart/form-data" action="/dof/<%= kayit.id %>/aksiyonlar/<%= aksiyon.id %>" class="dof-aksiyon-form-gizli"></form>
+    <% } }) %>
+    <p class="metin-kucuk metin-soluk">Kanıt dosyası en fazla 10 MB olabilir: PDF, Word, Excel, PNG, JPG veya TXT.</p>
+  <% } else { %>
+    <div class="bilgi-kutu">Bu DÖF için henüz aksiyon tanımlanmadı. Aşağıdaki formdan ilk aksiyonu ekleyin.</div>
+  <% } %>
+
+  <% if (duzenlenebilir) { %>
+    <details class="dof-ekle" <%= aksiyonlar.length ? '' : 'open' %>>
+      <summary>Yeni aksiyon ekle</summary>
+      <form method="post" enctype="multipart/form-data" action="/dof/<%= kayit.id %>/aksiyonlar" class="dof-yeni-aksiyon-form">
+        <div class="form-grid">
+          <div class="alan tam">
+            <label for="yeni-aksiyon-aciklama">Aksiyon açıklaması <span class="zorunlu-yazi">*</span></label>
+            <textarea id="yeni-aksiyon-aciklama" name="aciklama" minlength="3" maxlength="800" rows="3" required placeholder="Alınacak düzeltici/önleyici faaliyeti yazın…"></textarea>
+          </div>
+          <div class="alan">
+            <label for="yeni-aksiyon-sorumlu">Sorumlu personel <span class="zorunlu-yazi">*</span></label>
+            <select id="yeni-aksiyon-sorumlu" name="sorumlu_id" required>
+              <option value="">— Personel seçin —</option>
+              <% kullanicilar.forEach(function (kisi) { %>
+                <option value="<%= kisi.id %>"><%= kisi.ad %><%= kisi.departman_ad ? ' · ' + kisi.departman_ad : '' %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="alan">
+            <label for="yeni-aksiyon-hedef">Hedef tarih <span class="zorunlu-yazi">*</span></label>
+            <input class="girdi" type="date" id="yeni-aksiyon-hedef" name="hedef_tarih" value="<%= bugun %>" required>
+          </div>
+          <div class="alan">
+            <label for="yeni-aksiyon-durum">Durum</label>
+            <select id="yeni-aksiyon-durum" name="durum">
+              <% DOF_AKSIYON_DURUM_ANAHTARLARI.forEach(function (anahtar) { %>
+                <option value="<%= anahtar %>" <%= anahtar === 'acik' ? 'selected' : '' %>><%= DOF_AKSIYON_DURUMLARI[anahtar] %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="alan">
+            <label for="yeni-aksiyon-kanit-aciklama">Kanıt açıklaması</label>
+            <input class="girdi" type="text" id="yeni-aksiyon-kanit-aciklama" name="kanit_aciklama" maxlength="500" placeholder="Kanıt niteliğindeki belge veya kayıt…">
+          </div>
+          <div class="alan">
+            <label for="yeni-aksiyon-kanit">Kanıt dosyası</label>
+            <input class="girdi" type="file" id="yeni-aksiyon-kanit" name="kanit" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt">
+          </div>
+        </div>
+        <button class="btn btn-birincil" type="submit">Aksiyon Ekle</button>
+      </form>
+    </details>
+  <% } %>
+</section>
+
+<section class="kart">
+  <div class="kart-bas">
+    <div>
+      <h2>Etkinlik Kontrolü ve Kapanış</h2>
+      <p>Tüm aksiyonlar tamamlandığında Kalite Yöneticisi etkinlik değerlendirmesini girerek DÖF'ü kapatır.</p>
+    </div>
+    <span class="rozet <%= dofDurumSinifi(kayit.durum) %>"><%= DOF_DURUMLARI[kayit.durum] %></span>
+  </div>
+
+  <% if (kayit.durum === 'kapandi') { %>
+    <div class="dof-kapanis-bilgi">
+      <div class="dof-metin-blok"><%= kayit.etkinlik_degerlendirmesi %></div>
+      <dl class="tanim-listesi">
+        <dt>Kapatan</dt><dd><%= kayit.kapatan_ad || '—' %></dd>
+        <dt>Kapanış tarihi</dt><dd><%= kayit.kapanis_tarihi ? zamanTr(kayit.kapanis_tarihi) : '—' %></dd>
+      </dl>
+    </div>
+  <% } else if (kapatmaHazir && kapatmaYetkisi) { %>
+    <form method="post" action="/dof/<%= kayit.id %>/kapat" class="dof-kapat-form" data-onay="DÖF kapatılacak. Etkinlik değerlendirmesi kaydedilsin mi?">
+      <div class="alan tam">
+        <label for="dof-etkinlik">Etkinlik değerlendirmesi <span class="zorunlu-yazi">*</span></label>
+        <textarea id="dof-etkinlik" name="etkinlik_degerlendirmesi" minlength="10" maxlength="5000" rows="5" required placeholder="Aksiyonların uygunsuzluğu ortadan kaldırdığını ve tekrar oluşmadığını doğrulayan değerlendirme…"><%= kayit.etkinlik_degerlendirmesi %></textarea>
+        <span class="ipucu">10-5000 karakter.</span>
+      </div>
+      <button class="btn btn-basari" type="submit">Etkinlik Değerlendirmesiyle DÖF'ü Kapat</button>
+    </form>
+  <% } else { %>
+    <div class="bilgi-kutu">
+      <% if (!aksiyonlar.length) { %>
+        Etkinlik kontrolüne geçmek için önce en az bir aksiyon ekleyin.
+      <% } else if (tamamlananAksiyon < aksiyonlar.length) { %>
+        Tüm aksiyonlar tamamlandığında DÖF otomatik olarak <strong>Etkinlik Kontrolü Bekliyor</strong> durumuna geçer.
+      <% } else if (kayit.durum === 'etkinlik_bekliyor') { %>
+        Tüm aksiyonlar tamamlandı. Kalite Yöneticisi etkinlik değerlendirmesiyle DÖF'ü kapatabilir.
+      <% } else { %>
+        DÖF etkinlik kontrolü aşamasına geçtiğinde kapatma işlemi burada görünür.
+      <% } %>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/alt') %>

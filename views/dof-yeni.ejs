@@ -1,0 +1,95 @@
+<%- include('partials/ust', { aktifSayfa: 'dof' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Yeni DÖF</h1>
+    <p>Uygunsuzluğu kaydedin. DÖF numarası tespit tarihine göre otomatik üretilir; kayıt açıldığında ilgili departmana bildirim gider.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/dof">DÖF Listesine Dön</a>
+  </div>
+</div>
+
+<form method="post" action="/dof/yeni" class="dof-form">
+  <section class="kart">
+    <div class="kart-bas">
+      <div>
+        <h2>DÖF Künyesi</h2>
+        <p>Tür, kaynak, departman, talep eden ve tespit tarihi zorunludur.</p>
+      </div>
+      <span class="rozet dof-durum-acik">Açık olarak başlar</span>
+    </div>
+
+    <div class="form-grid">
+      <div class="alan">
+        <label for="dof-tur">DÖF türü <span class="zorunlu-yazi">*</span></label>
+        <select id="dof-tur" name="tur" required>
+          <% DOF_TUR_ANAHTARLARI.forEach(function (anahtar) { %>
+            <option value="<%= anahtar %>" <%= form.tur === anahtar ? 'selected' : '' %>><%= DOF_TURLERI[anahtar] %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="alan">
+        <label for="dof-kaynak">Uygunsuzluk kaynağı <span class="zorunlu-yazi">*</span></label>
+        <select id="dof-kaynak" name="kaynak" required>
+          <% DOF_KAYNAK_ANAHTARLARI.forEach(function (anahtar) { %>
+            <option value="<%= anahtar %>" <%= form.kaynak === anahtar ? 'selected' : '' %>><%= DOF_KAYNAKLARI[anahtar] %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="alan">
+        <label for="dof-departman">İlgili departman <span class="zorunlu-yazi">*</span></label>
+        <select id="dof-departman" name="departman_id" required>
+          <option value="">— Departman seçin —</option>
+          <% departmanlar.forEach(function (departman) { %>
+            <option value="<%= departman.id %>" <%= String(form.departman_id) === String(departman.id) ? 'selected' : '' %>><%= departman.ad %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="alan">
+        <label for="dof-talep-eden">Talep eden kişi <span class="zorunlu-yazi">*</span></label>
+        <input class="girdi" type="text" id="dof-talep-eden" name="talep_eden" value="<%= form.talep_eden %>" minlength="2" maxlength="120" required>
+      </div>
+
+      <div class="alan">
+        <label for="dof-tespit">Tespit tarihi <span class="zorunlu-yazi">*</span></label>
+        <input class="girdi" type="date" id="dof-tespit" name="tespit_tarihi" value="<%= form.tespit_tarihi %>" required>
+        <span class="ipucu">DÖF numarasının yılı bu tarihe göre belirlenir (ör. <%= onKod %>).</span>
+      </div>
+
+      <div class="alan">
+        <label for="dof-dokuman">İlgili kalite dokümanı</label>
+        <select id="dof-dokuman" name="dokuman_id">
+          <option value="">— Doküman seçilmedi —</option>
+          <% dokumanlar.forEach(function (dokuman) { %>
+            <option value="<%= dokuman.id %>" <%= String(form.dokuman_id) === String(dokuman.id) ? 'selected' : '' %>>
+              <%= dokuman.kod %> · <%= dokuman.baslik %> (<%= revizyonEtiketi(dokuman.revizyon) %>)
+            </option>
+          <% }) %>
+        </select>
+        <span class="ipucu">Yalnızca yayındaki dokümanlar listelenir.</span>
+      </div>
+
+      <div class="alan tam">
+        <label for="dof-tanim">Uygunsuzluk tanımı <span class="zorunlu-yazi">*</span></label>
+        <textarea id="dof-tanim" name="uygunsuzluk_tanimi" minlength="10" maxlength="5000" rows="6" required placeholder="Tespit edilen uygunsuzluğu, etkilenen süreç/ürünü ve kanıtları açıklayın…"><%= form.uygunsuzluk_tanimi %></textarea>
+        <span class="ipucu">10-5000 karakter arasında olmalıdır.</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="bilgi-kutu">
+    <strong>Sonraki adımlar:</strong> Kayıt açıldıktan sonra detay sayfasından kök neden analizini, acil önlemi ve aksiyon planını doldurabilirsiniz.
+    Tüm aksiyonlar tamamlandığında DÖF etkinlik kontrolüne geçer ve Kalite Yöneticisi değerlendirme notuyla kapatır.
+  </div>
+
+  <div class="form-eylem dof-form-eylem">
+    <button class="btn btn-birincil" type="submit">DÖF Kaydını Aç</button>
+    <a class="btn btn-hayalet" href="/dof">Vazgeç</a>
+  </div>
+</form>
+
+<%- include('partials/alt') %>

@@ -11,6 +11,8 @@ const EPOSTA_TURLERI = Object.freeze({
   dokuman_onay: 'Doküman onay bildirimi',
   dokuman_yayin: 'Doküman yayın bildirimi',
   egitim_hatirlatma: 'Eğitim hatırlatması',
+  dof_acildi: 'DÖF açılış bildirimi',
+  dof_aksiyon: 'DÖF aksiyon atama bildirimi',
 });
 
 module.exports = {

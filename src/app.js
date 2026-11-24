@@ -36,6 +36,7 @@ const auth = require('./auth');
 const qdms = require('./qdms');
 const { pdfUret, logoVerisiCoz } = require('./pdf');
 const bildirimler = require('./bildirimler');
+const { dofOzeti } = require('./dof-rotalari');
 
 const SAYFA_ADLARI = Object.freeze({
   dashboard: 'Genel Bakış',
@@ -46,6 +47,9 @@ const SAYFA_ADLARI = Object.freeze({
   'egitim-yeni': 'Yeni Eğitim',
   'egitim-detay': 'Eğitim Detayı',
   'egitim-personel': 'Personel Eğitim Sicili',
+  dof: 'DÖF Yönetimi',
+  'dof-yeni': 'Yeni DÖF',
+  'dof-detay': 'DÖF Detayı',
   raporlar: 'Raporlar',
   organizasyon: 'Organizasyon ve Kullanıcılar',
   emailler: 'E-posta Günlüğü',
@@ -630,6 +634,8 @@ function createApp({ db, config, mailService = null }) {
       )
       .all(...gorunurluk.parametreler);
 
+    const dofOzet = dofOzeti(db, kullanici, auth.yetkiliMi(kullanici, 'dof'), res.locals.bugunIso);
+
     res.render('genel-bakis', {
       aktifSayfa: 'dashboard',
       sayfaBaslik: 'Genel Bakış',
@@ -642,6 +648,7 @@ function createApp({ db, config, mailService = null }) {
       bildirimler,
       turSayilari,
       onaylayabilir,
+      dofOzet,
     });
   });
 
@@ -1487,6 +1494,7 @@ function createApp({ db, config, mailService = null }) {
   // -------------------------------------------------------------------------
   require('./egitim-rotalari').egitimRotalariniKur(app, { db, auth, mail, config });
   require('./rapor-rotalari').raporRotalariniKur(app, { db, auth, mail, config });
+  require('./dof-rotalari').dofRotalariniKur(app, { db, auth, mail, config });
 
   // -------------------------------------------------------------------------
   // Organizasyon ve kullanıcılar

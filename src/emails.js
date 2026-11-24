@@ -261,6 +261,89 @@ function egitimHatirlatmaEpostasi({
   });
 }
 
+function dofAcildiEpostasi({
+  dof,
+  aliciAd,
+  turEtiketi,
+  kaynakEtiketi,
+  departmanAd,
+  tespitTarihi,
+  sirketAdi,
+  baglanti,
+  saatDilimi,
+} = {}) {
+  const kayit = dof && typeof dof === 'object' ? dof : {};
+  const kod = kayit.kod || '—';
+  const tanim = String(kayit.uygunsuzluk_tanimi || '').trim();
+  const tanimOzet = tanim.length > 280 ? `${tanim.slice(0, 279)}…` : tanim;
+  const icerik = `
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#1e293b;">
+      Sayın ${esc(aliciAd || 'Yetkili')},
+    </p>
+    <p style="margin:0 0 18px;font-size:14px;line-height:1.7;color:#475569;">
+      Departmanınızla ilgili <strong>${esc(kod)}</strong> numaralı bir DÖF kaydı açıldı.
+      Uygunsuzluğu inceleyip kök neden ve aksiyon planının hazırlanmasına destek vermeniz bekleniyor.
+    </p>
+    ${bilgiTablosu([
+      ['DÖF No', kod],
+      ['Tür', turEtiketi || '—'],
+      ['Uygunsuzluk kaynağı', kaynakEtiketi || '—'],
+      ['İlgili departman', departmanAd || '—'],
+      ['Talep eden', kayit.talep_eden || '—'],
+      ['Tespit tarihi', tespitTarihi || '—'],
+      ['Uygunsuzluk', tanimOzet || '—'],
+      ['Bildirim zamanı', gonderimZamani(new Date(), saatDilimi)],
+    ])}
+    ${dugmeBlogu(baglanti, 'DÖF Kaydını Aç')}
+    ${otomatikNot()}
+  `;
+  return kabuk({
+    baslik: 'Yeni DÖF Açıldı',
+    altBaslik: altBaslikOlustur(sirketAdi, 'Düzeltici ve önleyici faaliyet bildirimi'),
+    icerik,
+  });
+}
+
+function dofAksiyonAtandiEpostasi({
+  dof,
+  aksiyon,
+  aliciAd,
+  sorumluAd,
+  hedefTarihi,
+  sirketAdi,
+  baglanti,
+  saatDilimi,
+} = {}) {
+  const kayit = dof && typeof dof === 'object' ? dof : {};
+  const is = aksiyon && typeof aksiyon === 'object' ? aksiyon : {};
+  const kod = kayit.kod || '—';
+  const icerik = `
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#1e293b;">
+      Sayın ${esc(aliciAd || sorumluAd || 'Yetkili')},
+    </p>
+    <p style="margin:0 0 18px;font-size:14px;line-height:1.7;color:#475569;">
+      <strong>${esc(kod)}</strong> numaralı DÖF kapsamında size bir aksiyon atandı.
+      Aksiyonun hedef tarihine kadar tamamlanması ve kanıtlarının kayda eklenmesi bekleniyor.
+    </p>
+    ${bilgiTablosu([
+      ['DÖF No', kod],
+      ['Uygunsuzluk', kayit.uygunsuzluk_tanimi || '—'],
+      ['Aksiyon', is.aciklama || '—'],
+      ['Sorumlu', sorumluAd || aliciAd || '—'],
+      ['Hedef tarih', hedefTarihi || '—'],
+      ['Aksiyon durumu', is.durum_etiketi || 'Açık'],
+      ['Bildirim zamanı', gonderimZamani(new Date(), saatDilimi)],
+    ])}
+    ${dugmeBlogu(baglanti, 'Aksiyonu Görüntüle')}
+    ${otomatikNot()}
+  `;
+  return kabuk({
+    baslik: 'DÖF Aksiyonu Atandı',
+    altBaslik: altBaslikOlustur(sirketAdi, 'Aksiyon sorumluluğu bildirimi'),
+    icerik,
+  });
+}
+
 module.exports = {
   esc,
   kabuk,
@@ -269,4 +352,6 @@ module.exports = {
   onayBekliyorEpostasi,
   dokumanYayinlandiEpostasi,
   egitimHatirlatmaEpostasi,
+  dofAcildiEpostasi,
+  dofAksiyonAtandiEpostasi,
 };
