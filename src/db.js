@@ -180,6 +180,56 @@ CREATE TABLE IF NOT EXISTS egitim_katilimcilari (
 );
 CREATE INDEX IF NOT EXISTS idx_egitim_katilimcilari_kullanici ON egitim_katilimcilari (kullanici_id);
 CREATE INDEX IF NOT EXISTS idx_egitim_katilimcilari_egitim ON egitim_katilimcilari (egitim_id);
+
+-- ---------------------------------------------------------------------------
+-- Düzeltici ve Önleyici Faaliyetler (DÖF)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS dof_kayitlari (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kod TEXT NOT NULL UNIQUE,
+  tur TEXT NOT NULL CHECK (tur IN ('duzeltici', 'onleyici')),
+  kaynak TEXT NOT NULL
+    CHECK (kaynak IN ('ic_tetkik', 'musteri_sikayeti', 'surec_uretim_hatasi', 'ygg', 'diger')),
+  departman_id INTEGER REFERENCES departmanlar (id) ON DELETE SET NULL,
+  talep_eden TEXT NOT NULL,
+  tespit_tarihi TEXT NOT NULL,
+  uygunsuzluk_tanimi TEXT NOT NULL,
+  dokuman_id INTEGER REFERENCES dokumanlar (id) ON DELETE SET NULL,
+  kok_neden TEXT NOT NULL DEFAULT '',
+  acil_onlem TEXT NOT NULL DEFAULT '',
+  durum TEXT NOT NULL DEFAULT 'acik'
+    CHECK (durum IN ('acik', 'kok_neden', 'etkinlik_bekliyor', 'kapandi')),
+  etkinlik_degerlendirmesi TEXT NOT NULL DEFAULT '',
+  kapatan_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  kapanis_tarihi TEXT,
+  olusturan_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  olusturma_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  guncelleme_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS idx_dof_kayitlari_durum ON dof_kayitlari (durum);
+CREATE INDEX IF NOT EXISTS idx_dof_kayitlari_departman ON dof_kayitlari (departman_id);
+CREATE INDEX IF NOT EXISTS idx_dof_kayitlari_tespit ON dof_kayitlari (tespit_tarihi);
+
+CREATE TABLE IF NOT EXISTS dof_aksiyonlari (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  dof_id INTEGER NOT NULL REFERENCES dof_kayitlari (id) ON DELETE CASCADE,
+  sira INTEGER NOT NULL DEFAULT 0,
+  aciklama TEXT NOT NULL,
+  sorumlu_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  hedef_tarih TEXT NOT NULL,
+  durum TEXT NOT NULL DEFAULT 'acik'
+    CHECK (durum IN ('acik', 'devam_ediyor', 'tamamlandi', 'gecikti')),
+  kanit_aciklama TEXT NOT NULL DEFAULT '',
+  kanit_dosya TEXT,
+  kanit_dosya_adi TEXT,
+  tamamlanma_tarihi TEXT,
+  olusturan_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  olusturma_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  guncelleme_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS idx_dof_aksiyonlari_dof ON dof_aksiyonlari (dof_id);
+CREATE INDEX IF NOT EXISTS idx_dof_aksiyonlari_sorumlu ON dof_aksiyonlari (sorumlu_id);
+CREATE INDEX IF NOT EXISTS idx_dof_aksiyonlari_hedef ON dof_aksiyonlari (hedef_tarih);
 `;
 
 function openDatabase(dbYolu) {
@@ -189,7 +239,7 @@ function openDatabase(dbYolu) {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec('PRAGMA busy_timeout = 5000;');
   db.exec(SEMA);
-  db.exec('PRAGMA user_version = 4;');
+  db.exec('PRAGMA user_version = 5;');
   varsayilanVerileriYukle(db);
   return db;
 }

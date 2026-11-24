@@ -1,10 +1,10 @@
 # QDMS — Kurumsal Kalite Yönetim Sistemi
 
-Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bir **Kalite Yönetim Sistemi (QDMS)**. Kullanıcı ve rol yönetimi, departmanlar, doküman şablonları, otomatik antetli PDF üretimi, çok aşamalı onay, revizyon geçmişi, **“Okudum, Anladım”** takibi, **eğitim yönetimi**, **CSV/Excel kurumsal raporları** ve **otomatik e-posta bildirimleri** Faz 1–3 kapsamında hazırdır. Uygulama yalnızca QDMS arayüzü sunar; eski **Toplantı ve Aksiyon Takibi** modülü kaldırılmıştır.
+Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bir **Kalite Yönetim Sistemi (QDMS)**. Kullanıcı ve rol yönetimi, departmanlar, doküman şablonları, otomatik antetli PDF üretimi, çok aşamalı onay, revizyon geçmişi, **“Okudum, Anladım”** takibi, **eğitim yönetimi**, **DÖF (Düzeltici ve Önleyici Faaliyetler) yönetimi**, **CSV/Excel kurumsal raporları** ve **otomatik e-posta bildirimleri** Faz 1–4 kapsamında hazırdır. Uygulama yalnızca QDMS arayüzü sunar; eski **Toplantı ve Aksiyon Takibi** modülü kaldırılmıştır.
 
 ## Öne Çıkanlar
 
-- **Kurumsal sol menü:** Dashboard, Doküman Yönetimi (Prosedür `PR`, Talimat `TL`, El Kitabı `EK`, Liste `LS`, Form `FR`), Doküman Şablon Tasarımcısı, Eğitim Yönetimi, Personel Eğitim Sicili, Kurumsal Raporlar, Organizasyon ve Kullanıcılar, Sistem Ayarları.
+- **Kurumsal sol menü:** Dashboard, Doküman Yönetimi (Prosedür `PR`, Talimat `TL`, El Kitabı `EK`, Liste `LS`, Form `FR`), Doküman Şablon Tasarımcısı, Eğitim Yönetimi, Personel Eğitim Sicili, DÖF Yönetimi, Kurumsal Raporlar, Organizasyon ve Kullanıcılar, Sistem Ayarları.
 - **Giriş ve rol bazlı yetkilendirme:** Sistem Yöneticisi, Kalite Yöneticisi, Doküman Hazırlayan, Onaylayan, Standart Kullanıcı. İlk kurulumda otomatik yönetici hesabı oluşturulur.
 - **Departman yönetimi:** Üretim, Kalite Güvence, İnsan Kaynakları, Bakım, Satın Alma hazır gelir; yeni birim eklenebilir, kullanıcılar departmanlara atanır.
 - **Şablon tasarımcısı:** Her doküman türü için bölüm başlıkları, açıklamalar, zorunluluk, antet rengi, kenarlık stili, logo ve hazırlayan/onaylayan alt bilgi etiketleri tanımlanır. PDF önizlemesi anında alınır.
@@ -13,6 +13,7 @@ Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bi
 - **Onay ve revizyon:** `Taslak` → `Kontrol / Onay Bekliyor` → `Yayında` → `İptal / Arşiv`. Taslak PDF’inde **TASLAK** filigranı vardır; onaylandığında filigran kalkar, onaylayan ve onay tarihi belgeye işlenir. Yeni revizyon eski revizyonu arşivler; değişiklik notları saklanır.
 - **Dağıtım ve okuma takibi:** Doküman yayınlandığında seçilen departman personeline bildirim ve e-posta düşer; personel “Okudum, Anladım” onayı verir. Kalite yöneticisi yüzdelik ve isim listesiyle takip eder.
 - **Eğitim yönetimi:** Yıllık eğitim planı, iç/dış eğitim türü, eğitmen, süre, ilgili kalite dokümanı; personel/departman bazında katılımcı atama; katılım, puan ve etkinlik sonuçları; personel eğitim sicili.
+- **DÖF yönetimi:** Otomatik `DOF-YYYY-NNN` kodlama; uygunsuzluk kaynağı, departman, talep eden, tespit tarihi ve ilgili kalite dokümanı; 5 Neden/kök neden ve acil önlem; çok maddeli aksiyon planı (sorumlu, hedef tarih, durum, kanıt dosyası); `Açık → Kök Neden & Aksiyon Aşamasında → Etkinlik Kontrolü Bekliyor → Kapandı` akışı; antetli DÖF raporu PDF’i; dashboard özeti ve CSV/XLSX listesi.
 - **Kurumsal raporlama:** Güncel doküman ana listesi, okundu onayı matrisi ve yıllık eğitim matrisi; tümü **CSV** ve gerçek **XLSX** olarak indirilebilir.
 - **Otomatik e-postalar:** Onaya gönderimde onaylayanlara, yayında hedef departman personeline ve yaklaşan eğitimlerde katılımcılara e-posta. SMTP tanımlı değilse uygulama hata vermez; e-postalar test modunda outbox’a ve E-posta Günlüğü’ne kaydedilir.
 - **İsteğe bağlı hazır dosya:** Sistem PDF’i üretmek yerine PDF/Excel dosyası yüklenebilir.
@@ -43,6 +44,30 @@ Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bi
 | Otomatik E-postalar | PDF Antetinde Logo |
 | --- | --- |
 | ![E-posta Günlüğü](docs/screenshots/after-faz3-emailler.png) | ![PDF Logo](docs/screenshots/after-faz3-pdf-logo.png) |
+
+### DÖF Yönetimi — Faz 4
+
+Faz 3 dashboard’unda DÖF menüsü ve özet kartı yoktu; Faz 4 ile sol menüye **DÖF Yönetimi** ve dashboard’a **Açık ve Geciken DÖF’ler** kartı eklendi.
+
+| Önce — Faz 3 dashboard (DÖF menüsü/kartı yok) | Sonra — Faz 4 dashboard |
+| --- | --- |
+| ![Önce Dashboard](docs/screenshots/before-faz4-dof-dashboard.png) | ![Sonra Dashboard](docs/screenshots/after-faz4-dashboard.png) |
+
+| DÖF Ana Listesi | DÖF Detayı ve Aksiyon Planı |
+| --- | --- |
+| ![DÖF Listesi](docs/screenshots/after-faz4-dof-liste.png) | ![DÖF Detayı](docs/screenshots/after-faz4-dof-detay.png) |
+
+| Yeni DÖF | Etkinlik Kontrolü ve Kapatma |
+| --- | --- |
+| ![Yeni DÖF](docs/screenshots/after-faz4-dof-yeni.png) | ![Etkinlik Kontrolü](docs/screenshots/after-faz4-dof-etkinlik.png) |
+
+| Kapanmış DÖF | Antetli DÖF Raporu PDF — çok aksiyonlu |
+| --- | --- |
+| ![Kapanmış DÖF](docs/screenshots/after-faz4-dof-kapali.png) | ![DÖF PDF](docs/screenshots/after-faz4-dof-pdf-2.png) |
+
+| Antetli DÖF Raporu PDF — kapanış onayı |
+| --- |
+| ![DÖF PDF Kapalı](docs/screenshots/after-faz4-dof-pdf.png) |
 
 ### PDF Logo — Önce / Sonra
 
@@ -122,19 +147,20 @@ Tarayıcıda **http://127.0.0.1:3005** adresini açın. Farklı bir port için `
 
 | Rol | Yetkiler |
 | --- | --- |
-| **Sistem Yöneticisi** (`admin`) | Tüm modüller, kullanıcı/departman yönetimi, şirket ve SMTP ayarları, onay ve arşivleme, eğitim yönetimi ve raporlar |
-| **Kalite Yöneticisi** (`kalite`) | Şablon tasarımı, doküman oluşturma/düzenleme, onaylama, dağıtım ve okuma takibi, eğitim yönetimi ve raporlar |
-| **Doküman Hazırlayan** (`hazirlayan`) | Doküman oluşturma, kendi taslaklarını düzenleme ve onaya gönderme; eğitim planını ve kendi sicilini görüntüleme |
-| **Onaylayan** (`onaylayan`) | Kontrol / onay bekleyen dokümanları onaylama veya iade etme; eğitim planını ve kendi sicilini görüntüleme |
-| **Standart Kullanıcı** (`kullanici`) | Kendisine dağıtılan yayınlanmış dokümanları okuma, “Okudum, Anladım” onayı verme ve kendi eğitim sicilini görüntüleme |
+| **Sistem Yöneticisi** (`admin`) | Tüm modüller, kullanıcı/departman yönetimi, şirket ve SMTP ayarları, onay ve arşivleme, eğitim yönetimi, DÖF yönetimi ve kapatma, raporlar |
+| **Kalite Yöneticisi** (`kalite`) | Şablon tasarımı, doküman oluşturma/düzenleme, onaylama, dağıtım ve okuma takibi, eğitim yönetimi, DÖF yönetimi ve kapatma, raporlar |
+| **Doküman Hazırlayan** (`hazirlayan`) | Doküman oluşturma, kendi taslaklarını düzenleme ve onaya gönderme; eğitim planını, kendi sicilini ve departmanının DÖF kayıtlarını görüntüleme |
+| **Onaylayan** (`onaylayan`) | Kontrol / onay bekleyen dokümanları onaylama veya iade etme; eğitim planını, kendi sicilini ve departmanının DÖF kayıtlarını görüntüleme |
+| **Standart Kullanıcı** (`kullanici`) | Kendisine dağıtılan yayınlanmış dokümanları okuma, “Okudum, Anladım” onayı verme, kendi eğitim sicilini görüntüleme; departmanına ait veya aksiyon sorumlusu olduğu DÖF kayıtlarını görüntüleme ve kendi aksiyonunun durumunu güncelleme |
 
-Yetkisiz sayfalara erişim `403`, oturum yoksa giriş ekranına yönlendirme ile korunur. Tüm POST işlemleri oturum gerektirir.
+DÖF görünürlüğü: Sistem Yöneticisi ve Kalite Yöneticisi tüm kayıtları görür; diğer kullanıcılar yalnızca kendi departmanlarının, kendilerinin açtığı veya aksiyon sorumlusu oldukları DÖF kayıtlarını görüntüler. Yetkisiz sayfalara erişim `403`, oturum yoksa giriş ekranına yönlendirme ile korunur. Tüm POST işlemleri oturum gerektirir.
 
 ## Modüller
 
 ### 1. Dashboard
 
 - Bekleyen onaylar (onaylama yetkisi olanlara), okunmamış dokümanlar, yayındaki ve taslak doküman sayıları.
+- **Açık ve Geciken DÖF’ler** özet kartı: açık, geciken, etkinlik kontrolü bekleyen ve kapanan DÖF sayıları; karttan filtrelenmiş DÖF listesine geçilir.
 - Bildirimler, doküman tür dağılımı ve son dokümanlar.
 - Bildirimler tek tıkla okundu işaretlenebilir.
 
@@ -225,6 +251,15 @@ Yetkisiz sayfalara erişim `403`, oturum yoksa giriş ekranına yönlendirme ile
 - **Test araçları:** SMTP bağlantı testi ve test e-postası.
 - Varsayılan sunucu portu `3005`’tir.
 
+### 12. DÖF Yönetimi (Faz 4)
+
+- **Kayıt ve otomatik kodlama:** Sol menüdeki **DÖF Yönetimi** ekranından yeni kayıt açılır. `DOF-YYYY-NNN` numarası tespit tarihinin yılına göre otomatik üretilir. Kayıt alanları: DÖF türü (Düzeltici Faaliyet / Önleyici Faaliyet), uygunsuzluk kaynağı (İç Tetkik, Müşteri Şikayeti, Süreç/Üretim Hatası, YGG, Diğer), ilgili departman, talep eden kişi, tespit tarihi, uygunsuzluk tanımı ve yayındaki kalite dokümanlarından ilgili doküman seçimi.
+- **Kök neden ve aksiyon planı:** 5 Neden / kök neden açıklaması ve acil/geçici önlem alanları. Bir DÖF altında birden çok aksiyon maddesi; her biri için sorumlu personel, hedef tarih, durum (`Açık`, `Devam Ediyor`, `Tamamlandı`, `Gecikti`) ve kanıt açıklaması/dosyası (PDF, Word, Excel, PNG, JPG veya TXT; en fazla 10 MB). Hedef tarihi geçen tamamlanmamış aksiyonlar otomatik “Gecikti” görünür.
+- **Etkinlik ve kapatma:** `Açık → Kök Neden & Aksiyon Aşamasında → Etkinlik Kontrolü Bekliyor → Kapandı`. Tüm aksiyonlar tamamlandığında durum otomatik etkinlik kontrolüne geçer; Kalite Yöneticisi/Sistem Yöneticisi etkinlik değerlendirmesi notuyla kapatır. Kapanmış kayıtlar salt okunurdur.
+- **Antetli DÖF raporu PDF:** Şirket adı/logosu, DÖF künyesi, uygunsuzluk tanımı, acil önlem, kök neden, aksiyon tablosu ve kapanış onayı/imza kutularıyla A4 PDF; `PDF Önizle` ve `PDF İndir`.
+- **Liste, filtreler ve dışa aktarma:** Durum, tür, kaynak, departman ve geciken filtreleri; DÖF ana listesinin CSV ve gerçek XLSX çıktısı. Dışa aktarma yalnızca `dof` yetkisi olan kullanıcılara açıktır.
+- **Bildirimler:** DÖF açıldığında ilgili departmanın aktif personeline, aksiyon atandığında sorumluya uygulama içi bildirim ve SMTP e-postası gider; SMTP yoksa test modunda outbox ve E-posta Günlüğü’ne kaydedilir. Sorumlu personel kendi aksiyonunun durumunu ve kanıtını güncelleyebilir.
+
 ## PDF Tasarımı
 
 - A4 dikey sayfa, kurumsal antet bandı, **sol üstte şirket/şablon logosu için ayrı kutu** ve sağda şirket adı.
@@ -235,6 +270,7 @@ Yetkisiz sayfalara erişim `403`, oturum yoksa giriş ekranına yönlendirme ile
 - Taslakta her sayfada açılı **TASLAK** filigranı.
 - Logo; yüklenen PNG/JPG dosyasından veya Base64/data-URI verisinden okunur, en-boy oranı korunarak kutuya sığdırılır. WEBP gibi PDFKit’in çözemediği formatlar sessizce atlanmaz; yükleme reddedilir ve mevcut kayıt için uyarı gösterilir.
 - Türkçe karakterler için Unicode TTF gömülür; font bulunamazsa güvenli bir yedek yazı tipi ve Türkçe karakter dönüşümü kullanılır.
+- **DÖF raporu** ayrı bir antetli form olarak üretilir: kırmızı kurumsal antet bandı, logo kutusu ve şirket adı; DÖF No, tür, durum ve tespit tarihi tablosu; künye, uygunsuzluk tanımı, acil önlem, kök neden, aksiyon tablosu (sorumlu, hedef tarih, durum, kanıt) ve etkinlik değerlendirmesi/kapanış imza kutuları. Aksiyon tablosu sayfa sonunda bölünebilir ve her yeni sayfada antet yeniden basılır.
 
 ## Demo Verisi
 
@@ -251,7 +287,7 @@ Mevcut demo verilerini silip yeniden oluşturmak için:
 npm run demo -- --sifirla
 ```
 
-Demo komutu; örnek kullanıcıları, departman atamalarını, şablon kontrollü dokümanları, revizyonları, onay bekleyen kayıtları, okuma durumlarını ve **eğitim planı/katılım sonuçlarını** oluşturur. E-posta ayarları **test modunda** kaydedilir; gerçek e-posta gönderilmez.
+Demo komutu; örnek kullanıcıları, departman atamalarını, şablon kontrollü dokümanları, revizyonları, onay bekleyen kayıtları, okuma durumlarını, **eğitim planı/katılım sonuçlarını** ve **örnek DÖF kayıtları/aksiyonlarını** oluşturur. E-posta ayarları **test modunda** kaydedilir; gerçek e-posta gönderilmez.
 
 ### Demo Giriş Bilgileri
 
@@ -289,6 +325,8 @@ Testler şunları kapsar:
 - Eğitim planı oluşturma, departman/personel atama, katılım-puan-etkinlik sonuçları ve personel sicili
 - Rapor sayfaları, filtreler, CSV (BOM/`;`) ve gerçek XLSX çıktıları, yetki koruması
 - CSV/XLSX üreticisinin biçim, kaçış ve boş veri davranışı
+- DÖF tabloları, otomatik `DOF-YYYY-NNN` kodlama, görünürlük, kök neden ve aksiyon akışı, kanıt yükleme/indirme, etkinlik kontrolü ve kapatma
+- DÖF PDF raporu, CSV/XLSX listesi, dashboard özet kartı ve DÖF e-posta bildirimleri (test modu)
 - Kaldırılan toplantı/aksiyon sayfalarının artık 404 döndürmesi ve menüde görünmemesi
 
 ## Proje Yapısı
@@ -301,7 +339,9 @@ Testler şunları kapsar:
 │   ├── auth.js               # Şifre (scrypt), oturum, roller ve yetkiler
 │   ├── qdms.js               # Doküman türleri, durumlar, şablon/kod yardımcıları
 │   ├── varsayilanlar.js      # İlk kurulum seed: departman, tür, şablon, admin
-│   ├── pdf.js                # PDFKit ile antetli/filigranlı PDF ve logo üretimi
+│   ├── pdf.js                # PDFKit ile antetli/filigranlı doküman ve DÖF PDF üretimi
+│   ├── dof.js                # DÖF tür/kaynak/durum sabitleri, kodlama ve görünürlük yardımcıları
+│   ├── dof-rotalari.js       # DÖF kayıt/aksiyon/kapatma, kanıt, PDF ve CSV/XLSX rotaları
 │   ├── egitim-rotalari.js    # Eğitim planı, katılımcı, sonuç ve personel sicili rotaları
 │   ├── rapor-rotalari.js     # Doküman/okundu/eğitim raporları ve CSV/XLSX indirme
 │   ├── disa-aktarma.js       # Bağımlılıksız CSV ve gerçek XLSX üretici
@@ -315,10 +355,10 @@ Testler şunları kapsar:
 │   ├── dogrulama.js          # Form ve e-posta doğrulama
 │   ├── settings.js           # Ayar okuma/yazma, şirket kimliği
 │   └── sabitler.js           # E-posta durum ve tür etiketleri
-├── views/                    # EJS sayfaları ve partial'lar
-├── public/                   # CSS (styles, egitim, raporlar), JS, favicon
-├── scripts/demo-verisi.js    # Örnek QDMS verisi (doküman + eğitim)
-├── test/                     # node:test testleri
+├── views/                    # EJS sayfaları ve partial'lar (DÖF: dof, dof-yeni, dof-detay)
+├── public/                   # CSS (styles, egitim, raporlar, dof), JS, favicon
+├── scripts/demo-verisi.js    # Örnek QDMS verisi (doküman + eğitim + DÖF)
+├── test/                     # node:test testleri (dof.test.js dahil)
 ├── docs/screenshots/         # Önce/sonra ekran görüntüleri
 ├── data/                     # SQLite, outbox ve yüklemeler (gitignore)
 └── .github/workflows/test.yml
@@ -338,6 +378,8 @@ Testler şunları kapsar:
 - `bildirimler`: kullanıcıya özel onay/doküman/eğitim bildirimleri
 - `egitimler`: `ad`, `tur` (`ic`/`dis`), `egitmen`, `planlanan_tarih`, `sure_saat`, `dokuman_id`, `aciklama`, `durum` (`planlandi`/`tamamlandi`/`iptal`)
 - `egitim_katilimcilari`: `egitim_id`, `kullanici_id`, `katilim_durumu`, `degerlendirme_puani` (0–100), `etkinlik_durumu`, `sertifika_no`, `not_metni`, `hatirlatma_tarihi`
+- `dof_kayitlari`: `kod` (`DOF-YYYY-NNN`), `tur` (`duzeltici`/`onleyici`), `kaynak`, `departman_id`, `talep_eden`, `tespit_tarihi`, `uygunsuzluk_tanimi`, `dokuman_id`, `kok_neden`, `acil_onlem`, `durum` (`acik`/`kok_neden`/`etkinlik_bekliyor`/`kapandi`), `etkinlik_degerlendirmesi`, `kapatan_id`, `kapanis_tarihi`, `olusturan_id`
+- `dof_aksiyonlari`: `dof_id`, `sira`, `aciklama`, `sorumlu_id`, `hedef_tarih`, `durum` (`acik`/`devam_ediyor`/`tamamlandi`/`gecikti`), `kanit_aciklama`, `kanit_dosya`, `kanit_dosya_adi`, `tamamlanma_tarihi`
 - `ayarlar`, `email_kayitlari`: sistem ayarları ve e-posta günlüğü
 
 Doküman kodları `(kod, revizyon)` çiftinde benzersizdir; aynı kodun farklı revizyonları geçmiş olarak saklanır. Yabancı anahtarlar açıktır (`PRAGMA foreign_keys = ON`).
@@ -370,7 +412,7 @@ Arayüzden kaydedilen değerler `.env` değerlerini geçersiz kılar. SMTP şifr
 - İlk kurulum yönetici şifresi `README.md`’de açıkça yer alır; **ilk girişte değiştirilmelidir**.
 - Parolalar `scrypt` ile tuzlanmış olarak saklanır. Oturumlar `HttpOnly`, `SameSite=Lax` çerezle ve sunucu tarafındaki rastgele token ile yönetilir; süre 7 gündür.
 - Uygulama varsayılan olarak yalnızca `127.0.0.1` üzerinde dinler. İnternete açık bir sunucuya taşınacaksa HTTPS, ters vekil (reverse proxy), güvenlik duvarı ve istek sınırlandırma eklenmelidir.
-- Yüklenen logolar PNG/JPG ile, belgeler PDF/XLS/XLSX ile ve 10 MB sınırıyla kısıtlanır; dosyalar yalnızca oturum açmış kullanıcılara sunulur.
+- Yüklenen logolar PNG/JPG ile, belgeler PDF/XLS/XLSX ile, DÖF kanıt dosyaları PDF/Word/Excel/PNG/JPG/TXT ile ve 10 MB sınırıyla kısıtlanır; dosyalar yalnızca oturum açmış ve kayda erişimi olan kullanıcılara sunulur.
 - Formlarda CSRF token’ı ve giriş denemesi sınırlandırması yoktur; yerel/kurum içi kullanım için tasarlanmıştır.
 - SMTP şifresi SQLite’ta düz metin olarak saklanır. `data/` klasörünü ve `.env` dosyasını koruyun; depoya eklemeyin.
 
@@ -383,6 +425,7 @@ Arayüzden kaydedilen değerler `.env` değerlerini geçersiz kılar. SMTP şifr
 - E-posta teslimi SMTP sağlayıcısına bağlıdır. Eğitim hatırlatmaları uygulama açıkken çalışır (açılışta ve 6 saatte bir); uygulama kapalıyken planlanmış gönderim yapılmaz.
 - E-posta ekleri ve takvim (iCal) entegrasyonu yoktur.
 - Kurumsal raporlar tek tablo/çalışma sayfası olarak indirilir; XLSX dosyalarında formül veya grafik üretilmez.
+- DÖF kayıtları silinmez; kapanmış DÖF’ler salt okunurdur ve yeniden açılmaz. Kanıt dosyaları uygulama içinden indirilebilir, ayrı bir sürüm geçmişi tutulmaz.
 
 ## Sorun Giderme
 

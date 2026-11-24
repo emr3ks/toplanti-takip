@@ -29,6 +29,8 @@ if (mevcut > 0 && !sifirla) {
 
 if (sifirla) {
   db.exec(`
+    DELETE FROM dof_aksiyonlari;
+    DELETE FROM dof_kayitlari;
     DELETE FROM egitim_katilimcilari;
     DELETE FROM egitimler;
     DELETE FROM bildirimler;
@@ -40,7 +42,7 @@ if (sifirla) {
     DELETE FROM email_kayitlari;
     DELETE FROM kullanicilar;
   `);
-  console.log('Mevcut doküman, eğitim, kullanıcı ve e-posta kayıtları temizlendi.');
+  console.log('Mevcut doküman, DÖF, eğitim, kullanıcı ve e-posta kayıtları temizlendi.');
 }
 
 const ayarlar = etkinAyarlar(db, config);
@@ -469,16 +471,200 @@ egitimEkle({
   katilimcilar: [{ id: saha }, { id: bakimci }],
 });
 
+// ---------------------------------------------------------------------------
+// DÖF (Düzeltici ve Önleyici Faaliyet) örnekleri
+// ---------------------------------------------------------------------------
+const dofYili = bugun.slice(0, 4);
+let dofSira = 0;
+
+function dofEkle({
+  tur,
+  kaynak,
+  departmanId,
+  talepEden,
+  tespitTarihi,
+  tanim,
+  dokumanId = null,
+  kokNeden = '',
+  acilOnlem = '',
+  durum = 'acik',
+  etkinlikNotu = '',
+  kapatanId = null,
+  kapanisTarihi = null,
+  aksiyonlar = [],
+}) {
+  dofSira += 1;
+  const kod = `DOF-${dofYili}-${String(dofSira).padStart(3, '0')}`;
+  const bilgi = db
+    .prepare(
+      `INSERT INTO dof_kayitlari
+        (kod, tur, kaynak, departman_id, talep_eden, tespit_tarihi, uygunsuzluk_tanimi,
+         dokuman_id, kok_neden, acil_onlem, durum, etkinlik_degerlendirmesi,
+         kapatan_id, kapanis_tarihi, olusturan_id, olusturma_tarihi, guncelleme_tarihi)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      kod,
+      tur,
+      kaynak,
+      departmanId,
+      talepEden,
+      tespitTarihi,
+      tanim,
+      dokumanId,
+      kokNeden,
+      acilOnlem,
+      durum,
+      etkinlikNotu,
+      kapatanId,
+      kapanisTarihi,
+      kalite,
+      simdi,
+      simdi
+    );
+  const dofId = Number(bilgi.lastInsertRowid);
+  const ekle = db.prepare(
+    `INSERT INTO dof_aksiyonlari
+      (dof_id, sira, aciklama, sorumlu_id, hedef_tarih, durum, kanit_aciklama,
+       tamamlanma_tarihi, olusturan_id, olusturma_tarihi, guncelleme_tarihi)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  aksiyonlar.forEach((aksiyon, indeks) => {
+    ekle.run(
+      dofId,
+      indeks + 1,
+      aksiyon.aciklama,
+      aksiyon.sorumluId,
+      aksiyon.hedefTarih,
+      aksiyon.durum || 'acik',
+      aksiyon.kanitAciklama || '',
+      aksiyon.durum === 'tamamlandi' ? gunOnce(1) : null,
+      kalite,
+      simdi,
+      simdi
+    );
+  });
+  return dofId;
+}
+
+const dofMusteri = dofEkle({
+  tur: 'duzeltici',
+  kaynak: 'musteri_sikayeti',
+  departmanId: uretimDepartman,
+  talepEden: 'Müşteri Kalite Ekibi',
+  tespitTarihi: gunEkle(bugun, -18),
+  tanim:
+    'Müşteri sevkiyatında 12 adet üründe yüzey çiziği bildirildi. Etkilenen parti 2026-08 üretim dönemine ait ve sevkiyat öncesi yüzey kontrolünde izlenmemiş.',
+  dokumanId: tl001,
+  kokNeden:
+    '5 Neden: Çizik neden oluşuyor? (1) Paketleme sırasında parçalar birbirine temas ediyor. (2) Ara katman koruma kullanılmıyor. (3) Paketleme talimatında ara katman adımı tanımlı değil. (4) Talimat hazırlanırken sevkiyat riskleri değerlendirilmemiş. (5) Paketleme süreci risk analizine dahil edilmemiş. Kök neden: Paketleme sürecinin risk analizinde yer almaması ve talimatta koruma adımının bulunmaması.',
+  acilOnlem:
+    'Etkilenen parti müşteriden geri çağrıldı, yeniden paketleme yapıldı ve sevkiyat öncesi %100 yüzey kontrolü başlatıldı.',
+  durum: 'kok_neden',
+  aksiyonlar: [
+    {
+      aciklama: 'Paketleme talimatına ara katman koruma adımı eklendi ve Rev.01 olarak yayınlandı.',
+      sorumluId: hazirlayan,
+      hedefTarih: gunEkle(bugun, -10),
+      durum: 'tamamlandi',
+      kanitAciklama: 'Güncellenen paketleme talimatı ve eğitim kaydı.',
+    },
+    {
+      aciklama: 'Sevkiyat öncesi yüzey kontrolü için kontrol listesi oluşturulacak.',
+      sorumluId: saha,
+      hedefTarih: gunEkle(bugun, -3),
+      durum: 'devam_ediyor',
+      kanitAciklama: 'Kontrol listesi taslağı hazır.',
+    },
+  ],
+});
+
+const dofBakim = dofEkle({
+  tur: 'onleyici',
+  kaynak: 'ic_tetkik',
+  departmanId: bakimDepartman,
+  talepEden: 'İç Tetkik Ekibi',
+  tespitTarihi: gunEkle(bugun, -30),
+  tanim:
+    'İç tetkikte kritik ekipmanların yağlama periyotlarının bakım planında tanımlı olmadığı görüldü. Bu durum plansız duruş riski oluşturuyor.',
+  dokumanId: pr001,
+  kokNeden:
+    'Kök neden: Bakım planı ekipman bazında hazırlanmış ancak yağlama periyotları üretici önerileriyle eşleştirilmemiş. Periyodik gözden geçirme sorumluluğu tanımlı değil.',
+  acilOnlem: 'Kritik ekipmanlar için geçici yağlama takvimi devreye alındı.',
+  durum: 'etkinlik_bekliyor',
+  etkinlikNotu: '',
+  aksiyonlar: [
+    {
+      aciklama: 'Kritik ekipman yağlama periyotları üretici önerileriyle bakım planına işlendi.',
+      sorumluId: bakimci,
+      hedefTarih: gunEkle(bugun, -12),
+      durum: 'tamamlandi',
+      kanitAciklama: 'Güncel bakım planı ve üretici öneri dokümanları.',
+    },
+    {
+      aciklama: 'Bakım planı gözden geçirme sorumluluğu talimata eklendi ve ekip bilgilendirildi.',
+      sorumluId: kalite,
+      hedefTarih: gunEkle(bugun, -5),
+      durum: 'tamamlandi',
+      kanitAciklama: 'Talimat Rev.00 ve toplantı tutanağı.',
+    },
+  ],
+});
+
+const dofYgg = dofEkle({
+  tur: 'duzeltici',
+  kaynak: 'ygg',
+  departmanId: kaliteDepartman,
+  talepEden: 'Yönetim Gözden Geçirme Toplantısı',
+  tespitTarihi: gunEkle(bugun, -60),
+  tanim:
+    'YGG toplantısında kalite hedeflerinin üç ayda bir yerine yılda bir izlendiği tespit edildi. Hedeflerden sapmalar zamanında görülemiyor.',
+  dokumanId: pr001,
+  kokNeden:
+    'Kök neden: Kalite hedefleri izleme takvimi tanımlı değil; mevcut prosedürde izleme sıklığı belirtilmemiş.',
+  acilOnlem: 'Üç aylık izleme takvimi hazırlanarak sorumlulara duyuruldu.',
+  durum: 'kapandi',
+  etkinlikNotu:
+    'Üç aylık izleme takvimi uygulanmaya başlandı. Son iki dönemde hedef sapmaları zamanında tespit edildi ve düzeltici faaliyetler açıldı. Etkinlik doğrulandı.',
+  kapatanId: kalite,
+  kapanisTarihi: gunOnce(20),
+  aksiyonlar: [
+    {
+      aciklama: 'Kalite hedefleri izleme takvimi hazırlandı ve prosedüre işlendi.',
+      sorumluId: kalite,
+      hedefTarih: gunEkle(bugun, -30),
+      durum: 'tamamlandi',
+      kanitAciklama: 'Güncellenen prosedür ve üç aylık izleme takvimi.',
+    },
+  ],
+});
+
+const dofTedarikci = dofEkle({
+  tur: 'onleyici',
+  kaynak: 'surec_uretim_hatasi',
+  departmanId: satinAlmaDepartman,
+  talepEden: 'Satın Alma Sorumlusu',
+  tespitTarihi: gunEkle(bugun, -5),
+  tanim:
+    'Tedarikçi değerlendirme puanlarının yalnızca yıllık olarak hesaplandığı, düşük performanslı tedarikçilerin zamanında izlenmediği tespit edildi.',
+  dokumanId: ls001,
+  durum: 'acik',
+  aksiyonlar: [],
+});
+
 const sayilar = {
   kullanici: db.prepare('SELECT COUNT(*) AS sayi FROM kullanicilar').get().sayi,
   dokuman: db.prepare('SELECT COUNT(*) AS sayi FROM dokumanlar').get().sayi,
   yayinda: db.prepare("SELECT COUNT(*) AS sayi FROM dokumanlar WHERE durum = 'yayinda'").get().sayi,
+  dof: db.prepare('SELECT COUNT(*) AS sayi FROM dof_kayitlari').get().sayi,
+  dofAksiyon: db.prepare('SELECT COUNT(*) AS sayi FROM dof_aksiyonlari').get().sayi,
 };
 
 console.log('');
 console.log('Örnek QDMS verileri oluşturuldu.');
 console.log(`  Kullanıcı : ${sayilar.kullanici}`);
 console.log(`  Doküman   : ${sayilar.dokuman} (${sayilar.yayinda} yayında)`);
+console.log(`  DÖF       : ${sayilar.dof} kayıt, ${sayilar.dofAksiyon} aksiyon`);
 console.log(`  Bugün     : ${bugun}`);
 console.log(`  Veritabanı: ${config.dbPath}`);
 console.log('');

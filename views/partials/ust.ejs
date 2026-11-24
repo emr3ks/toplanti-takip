@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/egitim.css">
   <link rel="stylesheet" href="/raporlar.css">
+  <link rel="stylesheet" href="/dof.css">
 </head>
 <body>
 <div class="uygulama">
@@ -20,7 +21,7 @@
       <% } %>
       <span class="marka-metin">
         <strong><%= sirket ? sirket.ad : 'Kalite Yönetim Sistemi' %></strong>
-        <small>Quality Management System · Faz 3</small>
+        <small>Quality Management System · Faz 4</small>
       </span>
     </a>
 
@@ -74,6 +75,14 @@
         <a class="menu-link <%= aktifSayfa === 'egitim-personel' ? 'aktif' : '' %>" href="/egitim/personel">
           <span class="menu-ikon"><%- include('ikon', { ad: 'organizasyon' }) %></span>
           <span>Personel Eğitim Sicili</span>
+        </a>
+      </div>
+
+      <div class="menu-grup">
+        <span class="menu-baslik">Kalite</span>
+        <a class="menu-link <%= aktifSayfa === 'dof' ? 'aktif' : '' %>" href="/dof" <%= aktifSayfa === 'dof' ? 'aria-current="page"' : '' %>>
+          <span class="menu-ikon"><%- include('ikon', { ad: 'dof' }) %></span>
+          <span>DÖF Yönetimi</span>
         </a>
       </div>
 

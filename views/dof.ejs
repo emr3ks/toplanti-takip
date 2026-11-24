@@ -1,0 +1,182 @@
+<%- include('partials/ust', { aktifSayfa: 'dof' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>DÖF Yönetimi</h1>
+    <p>Düzeltici ve önleyici faaliyetleri kaydedin, kök neden ve aksiyon planını izleyin, etkinlik kontrolüyle kapatın.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <% if (dofYetkisi) { %>
+      <a class="btn btn-hayalet" href="<%= disaAktarmaAdresleri.csv %>">CSV İndir</a>
+      <a class="btn btn-hayalet" href="<%= disaAktarmaAdresleri.xlsx %>">Excel İndir</a>
+      <a class="btn btn-birincil" href="/dof/yeni">+ Yeni DÖF</a>
+    <% } %>
+  </div>
+</div>
+
+<section class="istatistik-grid dof-istatistik" aria-label="DÖF özeti">
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'dof' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.toplam %></strong>
+      <span>Toplam DÖF</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon amber"><%- include('partials/ikon', { ad: 'zil' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.acik %></strong>
+      <span>Açık DÖF</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon kirmizi"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.geciken %></strong>
+      <span>Geciken DÖF</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.etkinlik %></strong>
+      <span>Etkinlik kontrolü bekleyen</span>
+    </span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon yesil"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik">
+      <strong><%= ozet.kapandi %></strong>
+      <span>Kapanan DÖF</span>
+    </span>
+  </div>
+</section>
+
+<div class="kart">
+  <div class="kart-bas">
+    <div>
+      <h2>DÖF Ana Listesi</h2>
+      <p>Kayıtları tür, kaynak, departman ve duruma göre filtreleyin. Gecikenler hedef tarihi geçmiş açık aksiyonlardan hesaplanır.</p>
+    </div>
+    <span class="rozet rozet-acik"><%= liste.length %> kayıt</span>
+  </div>
+
+  <form class="egitim-filtre dof-filtre" method="get" action="/dof" data-otomatik-gonder>
+    <div class="alan">
+      <label for="dof-durum">Durum</label>
+      <select id="dof-durum" name="durum">
+        <option value="hepsi" <%= filtreler.durum === 'hepsi' ? 'selected' : '' %>>Tüm durumlar</option>
+        <% DOF_DURUM_ANAHTARLARI.forEach(function (anahtar) { %>
+          <option value="<%= anahtar %>" <%= filtreler.durum === anahtar ? 'selected' : '' %>><%= DOF_DURUMLARI[anahtar] %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan">
+      <label for="dof-tur">Tür</label>
+      <select id="dof-tur" name="tur">
+        <option value="">Tüm türler</option>
+        <% DOF_TUR_ANAHTARLARI.forEach(function (anahtar) { %>
+          <option value="<%= anahtar %>" <%= filtreler.tur === anahtar ? 'selected' : '' %>><%= DOF_TURLERI[anahtar] %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan">
+      <label for="dof-kaynak">Uygunsuzluk Kaynağı</label>
+      <select id="dof-kaynak" name="kaynak">
+        <option value="">Tüm kaynaklar</option>
+        <% DOF_KAYNAK_ANAHTARLARI.forEach(function (anahtar) { %>
+          <option value="<%= anahtar %>" <%= filtreler.kaynak === anahtar ? 'selected' : '' %>><%= DOF_KAYNAKLARI[anahtar] %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan">
+      <label for="dof-departman">Departman</label>
+      <select id="dof-departman" name="departman">
+        <option value="">Tüm departmanlar</option>
+        <% departmanlar.forEach(function (departman) { %>
+          <option value="<%= departman.id %>" <%= Number(filtreler.departmanId) === departman.id ? 'selected' : '' %>><%= departman.ad %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan egitim-filtre-arama">
+      <label for="dof-arama">DÖF no, talep eden veya tanım ara</label>
+      <input class="girdi" type="search" id="dof-arama" name="q" value="<%= filtreler.arama %>" maxlength="100" placeholder="Örn. DOF-2026-001, üretim…">
+    </div>
+    <div class="alan dof-geciken-alan">
+      <label class="onay-alani dof-geciken-onay">
+        <input type="checkbox" name="geciken" value="1" <%= filtreler.geciken ? 'checked' : '' %>>
+        <span>Yalnızca gecikenler</span>
+      </label>
+    </div>
+    <div class="egitim-filtre-eylem">
+      <button class="btn btn-ikincil" type="submit">Filtrele</button>
+      <% if (filtreler.arama || filtreler.durum !== 'hepsi' || filtreler.tur || filtreler.kaynak || filtreler.departmanId || filtreler.geciken) { %>
+        <a class="btn btn-hayalet" href="/dof">Temizle</a>
+      <% } %>
+    </div>
+  </form>
+
+  <% if (liste.length) { %>
+    <div class="tablo-sarmal dof-tablo-sarmal">
+      <table class="tablo dof-tablo">
+        <thead>
+          <tr>
+            <th>DÖF No</th>
+            <th>Tür</th>
+            <th>Kaynak</th>
+            <th>Departman</th>
+            <th>Talep Eden</th>
+            <th>Tespit Tarihi</th>
+            <th>Aksiyon</th>
+            <th>Durum</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% liste.forEach(function (kayit) { %>
+            <tr>
+              <td>
+                <a class="dof-kod-link mono" href="/dof/<%= kayit.id %>"><strong><%= kayit.kod %></strong></a>
+                <% if (kayit.dokuman_kod) { %>
+                  <span class="dof-dokuman-not metin-kucuk metin-soluk"><%= kayit.dokuman_kod %></span>
+                <% } %>
+              </td>
+              <td><span class="rozet dof-tur-<%= kayit.tur %>"><%= DOF_TURLERI[kayit.tur] %></span></td>
+              <td><%= DOF_KAYNAKLARI[kayit.kaynak] %></td>
+              <td><%= kayit.departman_ad || '—' %></td>
+              <td><%= kayit.talep_eden %></td>
+              <td class="mono"><%= tarihTr(kayit.tespit_tarihi) %></td>
+              <td>
+                <span class="dof-aksiyon-sayi" title="<%= kayit.tamamlanan_aksiyon %> tamamlandı / <%= kayit.aksiyon_sayisi %> toplam">
+                  <strong><%= kayit.tamamlanan_aksiyon %></strong>/<%= kayit.aksiyon_sayisi %>
+                </span>
+                <% if (kayit.geciken_aksiyon) { %>
+                  <span class="rozet dof-aksiyon-gecikti"><%= kayit.geciken_aksiyon %> geciken</span>
+                <% } %>
+              </td>
+              <td><span class="rozet <%= dofDurumSinifi(kayit.durum) %>"><%= DOF_DURUMLARI[kayit.durum] %></span></td>
+              <td>
+                <div class="dof-satir-eylem">
+                  <a class="btn btn-kucuk btn-hayalet" href="/dof/<%= kayit.id %>">Detay</a>
+                  <a class="btn btn-kucuk btn-hayalet" href="/dof/<%= kayit.id %>/pdf" target="_blank" rel="noopener">PDF</a>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p class="metin-kucuk metin-soluk liste-alt-not"><%= liste.length %> DÖF listeleniyor.</p>
+  <% } else { %>
+    <div class="bos">
+      <div class="bos-ikon"><%- include('partials/ikon', { ad: 'dof' }) %></div>
+      <h3>Bu filtrelerde DÖF bulunamadı</h3>
+      <p>Seçilen kriterlere uyan bir kayıt yok. Filtreleri temizleyip yeniden deneyin.</p>
+      <% if (dofYetkisi) { %>
+        <a class="btn btn-birincil" href="/dof/yeni">+ Yeni DÖF</a>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/alt') %>

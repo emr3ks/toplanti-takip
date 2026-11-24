@@ -16,7 +16,10 @@ const {
   onayBekliyorEpostasi,
   dokumanYayinlandiEpostasi,
   egitimHatirlatmaEpostasi,
+  dofAcildiEpostasi,
+  dofAksiyonAtandiEpostasi,
 } = require('./emails');
+const dofYardimci = require('./dof');
 
 const EGITIM_TUR_ETIKETLERI = Object.freeze({
   ic: 'İç Eğitim',
@@ -428,8 +431,207 @@ async function egitimHatirlatmalariGonder({
   return sonuc;
 }
 
+function dofKaydiCoz(db, dof) {
+  if (dof === null || dof === undefined) return null;
+
+  if (typeof dof === 'number' || (typeof dof === 'string' && /^\d+$/.test(dof.trim()))) {
+    const id = Number(dof);
+    if (!Number.isInteger(id) || id <= 0) return null;
+    return (
+      db
+        .prepare(
+          `SELECT d.*, dep.ad AS departman_ad, doc.kod AS dokuman_kod,
+                  o.ad AS olusturan_ad
+           FROM dof_kayitlari d
+           LEFT JOIN departmanlar dep ON dep.id = d.departman_id
+           LEFT JOIN dokumanlar doc ON doc.id = d.dokuman_id
+           LEFT JOIN kullanicilar o ON o.id = d.olusturan_id
+           WHERE d.id = ?`
+        )
+        .get(id) || null
+    );
+  }
+
+  if (typeof dof !== 'object' || dof.id === undefined || dof.id === null) return null;
+  if (dof.kod && dof.departman_ad !== undefined) return dof;
+
+  const tam = db
+    .prepare(
+      `SELECT d.*, dep.ad AS departman_ad, doc.kod AS dokuman_kod,
+              o.ad AS olusturan_ad
+       FROM dof_kayitlari d
+       LEFT JOIN departmanlar dep ON dep.id = d.departman_id
+       LEFT JOIN dokumanlar doc ON doc.id = d.dokuman_id
+       LEFT JOIN kullanicilar o ON o.id = d.olusturan_id
+       WHERE d.id = ?`
+    )
+    .get(Number(dof.id));
+  return tam ? { ...tam, ...dof } : null;
+}
+
+/**
+ * Yeni açılan DÖF kaydını ilgili departmandaki aktif kullanıcılara duyurur.
+ * Kaydı açan kullanıcı ve geçersiz e-posta adresleri hariç tutulur.
+ *
+ * @returns {Promise<{gonderilen:number, atlanan:number, hatalar:string[]}>}
+ */
+async function dofAcildiBildiriminiGonder({ db, mail, config, dof } = {}) {
+  const sonuc = sonucNesnesi();
+  try {
+    if (!db || !mail) {
+      hataEkle(sonuc.hatalar, 'dof açılış bildirimi', 'Veritabanı veya e-posta servisi hazır değil.');
+      return sonuc;
+    }
+
+    const kayit = dofKaydiCoz(db, dof);
+    if (!kayit) {
+      hataEkle(sonuc.hatalar, 'dof açılış bildirimi', 'DÖF kaydı bulunamadı.');
+      return sonuc;
+    }
+
+    const ayarlar = ayarlarOku(db, config);
+    const sirketAdi = sirketOku(db);
+    const baglanti = mutlakBaglanti(config, `/dof/${kayit.id}`);
+
+    let kisiler;
+    try {
+      kisiler = kayit.departman_id
+        ? db
+            .prepare(
+              `SELECT id, ad, email FROM kullanicilar
+               WHERE aktif = 1 AND departman_id = ? AND id <> ?
+               ORDER BY ad COLLATE NOCASE`
+            )
+            .all(kayit.departman_id, kayit.olusturan_id || 0)
+        : [];
+    } catch (hata) {
+      hataEkle(
+        sonuc.hatalar,
+        'dof açılış bildirimi',
+        `İlgili departman kullanıcıları alınamadı: ${hataMesaji(hata)}`
+      );
+      return sonuc;
+    }
+
+    const hedefler = [];
+    for (const kisi of kisiler) {
+      if (!epostaGecerli(kisi.email)) {
+        sonuc.atlanan += 1;
+        continue;
+      }
+      hedefler.push(kisi);
+    }
+
+    sonuc.gonderilen = await kisiyeGonder({
+      mail,
+      kisiler: hedefler,
+      hatalar: sonuc.hatalar,
+      baglam: 'dof açılış bildirimi',
+      tur: 'dof_acildi',
+      konu: `Yeni DÖF açıldı: ${kayit.kod}`,
+      htmlOlustur: (kisi) =>
+        dofAcildiEpostasi({
+          dof: kayit,
+          aliciAd: kisi.ad,
+          turEtiketi: dofYardimci.turEtiketi(kayit.tur),
+          kaynakEtiketi: dofYardimci.kaynakEtiketi(kayit.kaynak),
+          departmanAd: kayit.departman_ad || '',
+          tespitTarihi: tarihTr(kayit.tespit_tarihi),
+          sirketAdi,
+          baglanti,
+          saatDilimi: ayarlar.saatDilimi,
+        }),
+    });
+  } catch (hata) {
+    hataEkle(sonuc.hatalar, 'dof açılış bildirimi', hata);
+  }
+  return sonuc;
+}
+
+/**
+ * Bir DÖF aksiyonunu sorumlusuna e-posta ile bildirir. Atamayı yapan kişi
+ * sorumlunun kendisiyse ve e-posta adresi geçersizse gönderim atlanır.
+ *
+ * @returns {Promise<{gonderilen:number, atlanan:number, hatalar:string[]}>}
+ */
+async function dofAksiyonAtandiBildiriminiGonder({
+  db,
+  mail,
+  config,
+  dof,
+  aksiyon,
+  sorumlu = null,
+  gonderenId = null,
+} = {}) {
+  const sonuc = sonucNesnesi();
+  try {
+    if (!db || !mail) {
+      hataEkle(sonuc.hatalar, 'dof aksiyon bildirimi', 'Veritabanı veya e-posta servisi hazır değil.');
+      return sonuc;
+    }
+
+    const kayit = dofKaydiCoz(db, dof);
+    if (!kayit) {
+      hataEkle(sonuc.hatalar, 'dof aksiyon bildirimi', 'DÖF kaydı bulunamadı.');
+      return sonuc;
+    }
+
+    const akt = aksiyon && typeof aksiyon === 'object' ? aksiyon : {};
+    const sorumluKisi =
+      sorumlu && typeof sorumlu === 'object'
+        ? sorumlu
+        : akt.sorumlu_id
+          ? db.prepare('SELECT id, ad, email FROM kullanicilar WHERE id = ? AND aktif = 1').get(akt.sorumlu_id)
+          : null;
+
+    if (!sorumluKisi || !epostaGecerli(sorumluKisi.email)) {
+      sonuc.atlanan += 1;
+      return sonuc;
+    }
+    if (gonderenId && Number(gonderenId) === Number(sorumluKisi.id)) {
+      sonuc.atlanan += 1;
+      return sonuc;
+    }
+
+    const ayarlar = ayarlarOku(db, config);
+    const sirketAdi = sirketOku(db);
+    const baglanti = mutlakBaglanti(config, `/dof/${kayit.id}`);
+    const yanit = await mail.gonder({
+      tur: 'dof_aksiyon',
+      alici: String(sorumluKisi.email).trim(),
+      konu: `DÖF aksiyonu atandı: ${kayit.kod}`,
+      html: dofAksiyonAtandiEpostasi({
+        dof: kayit,
+        aksiyon: { ...akt, durum_etiketi: dofYardimci.aksiyonDurumEtiketi(akt.durum) },
+        aliciAd: sorumluKisi.ad,
+        sorumluAd: sorumluKisi.ad,
+        hedefTarihi: tarihTr(akt.hedef_tarih),
+        sirketAdi,
+        baglanti,
+        saatDilimi: ayarlar.saatDilimi,
+      }),
+    });
+
+    if (yanit && yanit.ok) {
+      sonuc.gonderilen = 1;
+    } else {
+      hataEkle(
+        sonuc.hatalar,
+        'dof aksiyon bildirimi',
+        (yanit && yanit.hata) || 'E-posta gönderilemedi.',
+        sorumluKisi.email
+      );
+    }
+  } catch (hata) {
+    hataEkle(sonuc.hatalar, 'dof aksiyon bildirimi', hata);
+  }
+  return sonuc;
+}
+
 module.exports = {
   onayBekleyenleriBilgilendir,
   yayinBilgileriniGonder,
   egitimHatirlatmalariGonder,
+  dofAcildiBildiriminiGonder,
+  dofAksiyonAtandiBildiriminiGonder,
 };

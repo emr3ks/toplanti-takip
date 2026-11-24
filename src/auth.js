@@ -26,6 +26,8 @@ const IZINLER = Object.freeze({
     'dokuman.sil',
     'egitim',
     'rapor',
+    'dof',
+    'dof.kapat',
   ],
   kalite: [
     'sablon',
@@ -36,6 +38,8 @@ const IZINLER = Object.freeze({
     'dokuman.sil',
     'egitim',
     'rapor',
+    'dof',
+    'dof.kapat',
   ],
   hazirlayan: ['dokuman.olustur', 'dokuman.duzenle'],
   onaylayan: ['dokuman.onayla'],
