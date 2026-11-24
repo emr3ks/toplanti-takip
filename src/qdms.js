@@ -119,6 +119,33 @@ function turKoduGecerliMi(kod) {
   return Boolean(turGetir(kod));
 }
 
+/**
+ * Formdan gelen doküman türü değerini tür tanımına çözer.
+ * Tür kodu (PR, tl), görünen ad (Prosedür, El Kitabı) veya şablon ID'si kabul edilir.
+ */
+function turKoduCoz(db, deger) {
+  const ham = String(Array.isArray(deger) ? deger[0] : deger ?? '').trim();
+  if (!ham) return null;
+
+  const kodla = turGetir(ham);
+  if (kodla) return kodla;
+
+  if (/^\d+$/.test(ham) && db) {
+    const satir = db.prepare('SELECT tur_kod FROM sablonlar WHERE id = ?').get(Number(ham));
+    const tur = satir ? turGetir(satir.tur_kod) : null;
+    if (tur) return tur;
+  }
+
+  const aranan = ham.toLocaleLowerCase('tr-TR');
+  for (const kod of TUR_KODLARI) {
+    const tur = DOKUMAN_TURLERI[kod];
+    if ([tur.ad, tur.cogul].some((ad) => ad.toLocaleLowerCase('tr-TR') === aranan)) {
+      return tur;
+    }
+  }
+  return null;
+}
+
 function durumEtiketi(durum) {
   return DOKUMAN_DURUMLARI[durum] || durum || '—';
 }
@@ -243,6 +270,7 @@ module.exports = {
   varsayilanSablonlar,
   turGetir,
   turKoduGecerliMi,
+  turKoduCoz,
   durumEtiketi,
   durumSinifi,
   revizyonEtiketi,

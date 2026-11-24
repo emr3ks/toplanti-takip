@@ -528,3 +528,76 @@ test('PDF üretici Türkçe karakterleri ve taslak/yayın formatını destekler'
   }
   assert.ok(!taslak.equals(yayinda));
 });
+
+test('doküman türü formda gizli alanla gönderilir', async () => {
+  for (const kod of qdms.TUR_KODLARI) {
+    const sayfa = await sayfaAl(sunucu.base, `/dokumanlar/yeni?tur=${kod}`);
+    assert.equal(sayfa.durum, 200);
+    assert.match(sayfa.metin, new RegExp(`name="tur_kod" value="${kod}"`));
+  }
+});
+
+test('tür kodu, görünen ad ve şablon kimliği aynı türe çözülür', async () => {
+  assert.equal(qdms.turKoduCoz(db(), 'PR').kod, 'PR');
+  assert.equal(qdms.turKoduCoz(db(), ' tl ').kod, 'TL');
+  assert.equal(qdms.turKoduCoz(db(), 'Prosedür').kod, 'PR');
+  assert.equal(qdms.turKoduCoz(db(), 'El Kitabı').kod, 'EK');
+  assert.equal(qdms.turKoduCoz(db(), 'Formlar').kod, 'FR');
+  assert.equal(qdms.turKoduCoz(db(), 'gecersiz'), null);
+  assert.equal(qdms.turKoduCoz(db(), ''), null);
+  assert.equal(qdms.turKoduCoz(db(), null), null);
+
+  const sablon = qdms.sablonGetir(db(), 'LS');
+  assert.equal(qdms.turKoduCoz(db(), String(sablon.id)).kod, 'LS');
+});
+
+test('tür alanı boş gönderilirse geçerli tür uyarısı korunur', async () => {
+  const sablon = qdms.sablonGetir(db(), 'PR');
+  const veri = new FormData();
+  veri.set('baslik', 'Türsüz Doküman');
+  veri.set('hedef_departmanlar', String(uretim.id));
+  sablon.bolumler.forEach((bolum, indeks) => veri.set(`bolum_${indeks}`, 'Dolu bölüm.'));
+  const yanit = await fetch(`${sunucu.base}/dokumanlar/yeni`, {
+    method: 'POST',
+    headers: { cookie: cerezAl(sunucu.base) },
+    body: veri,
+    redirect: 'manual',
+  });
+  assert.equal(yanit.status, 303);
+  assert.match(konumMesaji(yanit.headers.get('location')), /Geçerli bir doküman türü seçin/);
+});
+
+test('beş doküman türü için taslak ve PDF başarıyla oluşturulur', async () => {
+  const beklenen = {
+    PR: 'Prosedür',
+    TL: 'Talimat',
+    EK: 'El Kitabı',
+    LS: 'Liste',
+    FR: 'Form',
+  };
+
+  for (const [turKod, turAd] of Object.entries(beklenen)) {
+    const olustur = await dokumanOlustur({
+      turKod,
+      baslik: `${turAd} Oluşturma Testi`,
+      departmanIdler: [uretim.id],
+    });
+    assert.equal(olustur.durum, 303);
+    const id = yolKimlik(olustur.konum, /\/dokumanlar\/(\d+)/);
+    assert.ok(id, `${turAd} için doküman kimliği dönmeli`);
+
+    const dokuman = db().prepare('SELECT * FROM dokumanlar WHERE id = ?').get(id);
+    assert.equal(dokuman.tur_kod, turKod);
+    assert.equal(dokuman.durum, 'taslak');
+    assert.ok(dokuman.icerik.includes('Amaç') || turKod === 'FR');
+
+    const pdfYanit = await fetch(`${sunucu.base}/dokumanlar/${id}/pdf`, {
+      headers: { cookie: cerezAl(sunucu.base) },
+    });
+    const pdf = Buffer.from(await pdfYanit.arrayBuffer());
+    assert.equal(pdfYanit.status, 200, `${turAd} PDF'i üretilmeli`);
+    assert.equal(pdfYanit.headers.get('content-type'), 'application/pdf');
+    assert.equal(pdf.slice(0, 5).toString(), '%PDF-');
+    assert.ok(pdf.length > 5_000);
+  }
+});

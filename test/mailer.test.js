@@ -20,8 +20,6 @@ function smtpAyarla(db, config, port, ek = {}) {
       smtp_pass: '',
       smtp_from_email: 'toplanti@ornek.com',
       smtp_from_name: 'Toplantı Takip Test',
-      rapor_alici: 'rapor@ornek.com',
-      hatirlatma_saati: '09:00',
       saat_dilimi: 'Europe/Istanbul',
       ...ek,
     },
@@ -128,8 +126,6 @@ test('gönderen adresi yoksa gerçek gönderim hata verir', async (t) => {
       smtp_port: String(fake.port),
       smtp_user: '',
       smtp_from_email: '',
-      rapor_alici: 'rapor@ornek.com',
-      hatirlatma_saati: '09:00',
       saat_dilimi: 'Europe/Istanbul',
     },
     ortam.config
