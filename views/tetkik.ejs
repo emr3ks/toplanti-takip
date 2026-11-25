@@ -1,0 +1,147 @@
+<%- include('partials/ust', { aktifSayfa: 'tetkik' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>İç Tetkik Yönetimi</h1>
+    <p>Yıllık denetim takvimini yönetin, denetçileri atayın, kontrol listesi sonuçlarını izleyin ve uygunsuzlukları DÖF modülüne aktarın.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/tetkik/takvim?yil=<%= filtreler.yil %>">Takvim</a>
+    <a class="btn btn-hayalet" href="/tetkik/checklistler">Kontrol Listeleri</a>
+    <% if (tetkikYetkisi) { %>
+      <a class="btn btn-birincil" href="/tetkik/yeni">+ Yeni İç Tetkik</a>
+    <% } %>
+  </div>
+</div>
+
+<section class="istatistik-grid tetkik-istatistik" aria-label="İç tetkik özeti">
+  <div class="stat">
+    <span class="stat-ikon"><%- include('partials/ikon', { ad: 'tetkik' }) %></span>
+    <span class="stat-icerik"><strong><%= ozet.toplam %></strong><span>Toplam tetkik</span></span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon slate"><%- include('partials/ikon', { ad: 'takvim' }) %></span>
+    <span class="stat-icerik"><strong><%= ozet.planlandi %></strong><span>Planlandı</span></span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon amber"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik"><strong><%= ozet.devamEdiyor %></strong><span>Devam ediyor</span></span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon yesil"><%- include('partials/ikon', { ad: 'onay' }) %></span>
+    <span class="stat-icerik"><strong><%= ozet.tamamlandi %></strong><span>Tamamlandı</span></span>
+  </div>
+  <div class="stat">
+    <span class="stat-ikon kirmizi"><%- include('partials/ikon', { ad: 'dof' }) %></span>
+    <span class="stat-icerik"><strong><%= ozet.dof %></strong><span>Açılan DÖF</span></span>
+  </div>
+</section>
+
+<div class="kart">
+  <div class="kart-bas">
+    <div>
+      <h2><%= filtreler.yil %> Yılı İç Tetkik Planı</h2>
+      <p>Departman, durum ve metin filtreleriyle yıllık planı daraltın.</p>
+    </div>
+    <span class="rozet rozet-acik"><%= liste.length %> kayıt</span>
+  </div>
+
+  <form class="egitim-filtre tetkik-filtre" method="get" action="/tetkik" data-otomatik-gonder>
+    <div class="alan">
+      <label for="tetkik-yil">Yıl</label>
+      <select id="tetkik-yil" name="yil">
+        <% yillar.forEach(function (yil) { %>
+          <option value="<%= yil %>" <%= filtreler.yil === yil ? 'selected' : '' %>><%= yil %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan">
+      <label for="tetkik-durum">Durum</label>
+      <select id="tetkik-durum" name="durum">
+        <option value="hepsi" <%= filtreler.durum === 'hepsi' ? 'selected' : '' %>>Tüm durumlar</option>
+        <% TETKIK_DURUM_ANAHTARLARI.forEach(function (anahtar) { %>
+          <option value="<%= anahtar %>" <%= filtreler.durum === anahtar ? 'selected' : '' %>><%= TETKIK_DURUMLARI[anahtar] %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan">
+      <label for="tetkik-departman">Departman</label>
+      <select id="tetkik-departman" name="departman">
+        <option value="">Tüm departmanlar</option>
+        <% departmanlar.forEach(function (departman) { %>
+          <option value="<%= departman.id %>" <%= Number(filtreler.departmanId) === departman.id ? 'selected' : '' %>><%= departman.ad %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan egitim-filtre-arama">
+      <label for="tetkik-arama">Referans, başlık veya kapsam</label>
+      <input class="girdi" type="search" id="tetkik-arama" name="q" value="<%= filtreler.arama %>" maxlength="100" placeholder="Örn. IT-2026-001…">
+    </div>
+    <div class="egitim-filtre-eylem">
+      <button class="btn btn-ikincil" type="submit">Filtrele</button>
+      <% if (filtreler.arama || filtreler.durum !== 'hepsi' || filtreler.departmanId) { %>
+        <a class="btn btn-hayalet" href="/tetkik?yil=<%= filtreler.yil %>">Temizle</a>
+      <% } %>
+    </div>
+  </form>
+
+  <% if (liste.length) { %>
+    <div class="tablo-sarmal tetkik-tablo-sarmal">
+      <table class="tablo tetkik-tablo">
+        <thead>
+          <tr>
+            <th>Tetik No</th>
+            <th>Başlık / Departman</th>
+            <th>Baş Denetçi</th>
+            <th>Planlanan Tarih</th>
+            <th>Checklist</th>
+            <th>İlerleme</th>
+            <th>Bulgu / DÖF</th>
+            <th>Durum</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% liste.forEach(function (kayit) { %>
+            <tr>
+              <td><a class="mono tetkik-kod-link" href="/tetkik/<%= kayit.id %>"><strong><%= kayit.kod %></strong></a></td>
+              <td>
+                <strong><%= kisaMetin(kayit.baslik, 58) %></strong>
+                <small class="metin-kucuk metin-soluk"><%= kayit.departman_ad || 'Departman belirtilmedi' %></small>
+              </td>
+              <td><%= kayit.denetleyen_ad || '—' %></td>
+              <td class="mono"><%= tarihTr(kayit.planlanan_tarih) %></td>
+              <td><%= kisaMetin(kayit.checklist_ad || '—', 42) %></td>
+              <td>
+                <span class="tetkik-ilerleme"><%= kayit.degerlendirilen_madde %>/<%= kayit.madde_sayisi %></span>
+              </td>
+              <td>
+                <span class="rozet tetkik-bulgu-rozeti"><%= kayit.bulgu_sayisi %> bulgu</span>
+                <span class="rozet dof-durum-acik"><%= kayit.dof_sayisi %> DÖF</span>
+              </td>
+              <td><span class="rozet <%= tetkikDurumSinifi(kayit.durum) %>"><%= TETKIK_DURUMLARI[kayit.durum] %></span></td>
+              <td>
+                <div class="tetkik-satir-eylem">
+                  <a class="btn btn-kucuk btn-hayalet" href="/tetkik/<%= kayit.id %>">Detay</a>
+                  <a class="btn btn-kucuk btn-hayalet" href="/tetkik/<%= kayit.id %>/pdf" target="_blank" rel="noopener">PDF</a>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p class="metin-kucuk metin-soluk liste-alt-not"><%= liste.length %> iç tetkik listeleniyor.</p>
+  <% } else { %>
+    <div class="bos">
+      <div class="bos-ikon"><%- include('partials/ikon', { ad: 'tetkik' }) %></div>
+      <h3>Bu filtrelerde iç tetkik bulunamadı</h3>
+      <p>Filtreleri temizleyin veya yeni bir yıllık tetkik planı oluşturun.</p>
+      <% if (tetkikYetkisi) { %>
+        <a class="btn btn-birincil" href="/tetkik/yeni">+ Yeni İç Tetkik</a>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/alt') %>

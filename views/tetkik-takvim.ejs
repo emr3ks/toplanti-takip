@@ -1,0 +1,75 @@
+<%- include('partials/ust', { aktifSayfa: 'tetkik-takvim' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1><%= filtreler.yil %> İç Tetkik Takvimi</h1>
+    <p>Yıllık planı aylara göre izleyin; filtreler liste ve takvim arasında aynı kayıtları gösterir.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/tetkik?yil=<%= filtreler.yil %>">Liste Görünümü</a>
+    <% if (yetkiliMi('tetkik')) { %>
+      <a class="btn btn-birincil" href="/tetkik/yeni">+ Yeni İç Tetkik</a>
+    <% } %>
+  </div>
+</div>
+
+<form class="kart tetkik-takvim-filtre" method="get" action="/tetkik/takvim">
+  <div class="form-grid">
+    <div class="alan">
+      <label for="takvim-yil">Yıl</label>
+      <input class="girdi" type="number" id="takvim-yil" name="yil" value="<%= filtreler.yil %>" min="2000" max="2200" required>
+    </div>
+    <div class="alan">
+      <label for="takvim-durum">Durum</label>
+      <select class="girdi" id="takvim-durum" name="durum">
+        <option value="hepsi" <%= filtreler.durum === 'hepsi' ? 'selected' : '' %>>Tüm durumlar</option>
+        <% TETKIK_DURUM_ANAHTARLARI.forEach(function (anahtar) { %>
+          <option value="<%= anahtar %>" <%= filtreler.durum === anahtar ? 'selected' : '' %>><%= TETKIK_DURUMLARI[anahtar] %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan">
+      <label for="takvim-departman">Departman</label>
+      <select class="girdi" id="takvim-departman" name="departman">
+        <option value="">Tüm departmanlar</option>
+        <% departmanlar.forEach(function (departman) { %>
+          <option value="<%= departman.id %>" <%= Number(filtreler.departmanId) === departman.id ? 'selected' : '' %>><%= departman.ad %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan egitim-filtre-arama">
+      <label for="takvim-arama">Ara</label>
+      <input class="girdi" type="search" id="takvim-arama" name="q" value="<%= filtreler.arama %>" maxlength="100" placeholder="Referans, başlık veya kapsam…">
+    </div>
+    <div class="alan" style="align-self:end;">
+      <button class="btn btn-birincil btn-tam" type="submit">Takvimi Filtrele</button>
+    </div>
+  </div>
+</form>
+
+<div class="tetkik-takvim-izgara">
+  <% aylar.forEach(function (ay) { %>
+    <section class="kart tetkik-ay-kart">
+      <div class="kart-bas">
+        <div><h2><%= ay.ad %></h2><p><%= ay.kayitlar.length %> tetkik</p></div>
+        <span class="ay-no"><%= ay.no %></span>
+      </div>
+      <% if (ay.kayitlar.length) { %>
+        <div class="tetkik-ay-kayitlari">
+          <% ay.kayitlar.forEach(function (kayit) { %>
+            <a class="tetkik-takvim-kayit" href="/tetkik/<%= kayit.id %>">
+              <span class="mono"><%= tarihTr(kayit.planlanan_tarih) %></span>
+              <strong><%= kisaMetin(kayit.baslik, 58) %></strong>
+              <small><%= kayit.departman_ad || '—' %> · <%= kayit.denetleyen_ad || 'Denetçi atanmadı' %></small>
+              <span class="rozet <%= tetkikDurumSinifi(kayit.durum) %>"><%= TETKIK_DURUMLARI[kayit.durum] %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p class="tetkik-ay-bos">Bu ay planlanmış tetkik yok.</p>
+      <% } %>
+    </section>
+  <% }) %>
+</div>
+
+<%- include('partials/alt') %>

@@ -1,0 +1,420 @@
+<%- include('partials/ust', { aktifSayfa: 'tetkik' }) %>
+
+<%
+  const basDenetci = denetciler.find(function (kisi) { return kisi.gorev === 'bas_denetci'; });
+  const seciliBasDenetciId = basDenetci ? basDenetci.kullanici_id : '';
+  const degerlendirmeAcik = degerlendirmeYetkisi && kayit.durum === 'devam_ediyor';
+  const tamamlanabilir = kayit.durum === 'devam_ediyor' && kapatmaYetkisi;
+%>
+
+<div class="sayfa-bas tetkik-detay-bas">
+  <div>
+    <div class="tetkik-detay-ust">
+      <span class="rozet <%= tetkikDurumSinifi(kayit.durum) %>"><%= TETKIK_DURUMLARI[kayit.durum] %></span>
+      <span class="mono metin-soluk"><%= kayit.kod %></span>
+      <span class="rozet rozet-acik"><%= TETKIK_STANDARTLARI[kayit.checklist_standart] || 'Kontrol Listesi' %></span>
+    </div>
+    <h1><%= kayit.baslik %></h1>
+    <p><%= kayit.departman_ad || 'Departman belirtilmedi' %> · Planlanan: <%= tarihTr(kayit.planlanan_tarih) %> · Baş denetçi: <%= kayit.denetleyen_ad || '—' %></p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/tetkik">Liste</a>
+    <a class="btn btn-ikincil" href="/tetkik/<%= kayit.id %>/pdf" target="_blank" rel="noopener">PDF Önizle</a>
+    <a class="btn btn-birincil" href="/tetkik/<%= kayit.id %>/pdf?indir=1">PDF İndir</a>
+  </div>
+</div>
+
+<section class="istatistik-grid tetkik-ozet-istatistik" aria-label="İç tetkik sonuç özeti">
+  <div class="stat"><span class="stat-icerik"><strong><%= puan.yuzde %>%</strong><span>Genel uyumluluk puanı</span></span></div>
+  <div class="stat"><span class="stat-icerik"><strong><%= dagilim.uygun %></strong><span>Uygun madde</span></span></div>
+  <div class="stat"><span class="stat-icerik"><strong><%= dagilim.minor %></strong><span>Minör uygunsuzluk</span></span></div>
+  <div class="stat"><span class="stat-icerik"><strong><%= dagilim.major %></strong><span>Majör uygunsuzluk</span></span></div>
+  <div class="stat"><span class="stat-icerik"><strong><%= dagilim.gozlem %></strong><span>Gözlem</span></span></div>
+  <div class="stat"><span class="stat-icerik"><strong><%= bulgular.length %></strong><span>Toplam bulgu</span></span></div>
+</section>
+
+<div class="iki-kolon tetkik-detay-kolonlar">
+  <div class="dikey">
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>İç Tetkik Bilgileri</h2><p>Plan kapsamı, kontrol listesi ve yürütme bilgileri.</p></div>
+        <span class="rozet <%= tetkikDurumSinifi(kayit.durum) %>"><%= TETKIK_DURUMLARI[kayit.durum] %></span>
+      </div>
+      <dl class="tanim-listesi">
+        <dt>Referans</dt><dd class="mono"><%= kayit.kod %></dd>
+        <dt>Yıl</dt><dd><%= kayit.yil %></dd>
+        <dt>Denetlenen departman</dt><dd><%= kayit.departman_ad || '—' %></dd>
+        <dt>Kontrol listesi</dt><dd><%= kayit.checklist_ad || '—' %></dd>
+        <dt>Planlanan tarih</dt><dd class="mono"><%= tarihTr(kayit.planlanan_tarih) %></dd>
+        <dt>Başlangıç</dt><dd class="mono"><%= kayit.baslangic_tarihi ? tarihTr(kayit.baslangic_tarihi) : '—' %></dd>
+        <dt>Bitiş</dt><dd class="mono"><%= kayit.bitis_tarihi ? tarihTr(kayit.bitis_tarihi) : '—' %></dd>
+        <dt>Oluşturan</dt><dd><%= kayit.olusturan_ad || '—' %></dd>
+        <dt>Tamamlayan</dt><dd><%= kayit.tamamlayan_ad || '—' %></dd>
+      </dl>
+      <div class="tetkik-metin-bloklar">
+        <div><strong>Denetim Amacı</strong><p><%= kayit.amac || '—' %></p></div>
+        <div><strong>Kapsam</strong><p><%= kayit.kapsam || '—' %></p></div>
+        <div><strong>Yöntem</strong><p><%= kayit.yontem || '—' %></p></div>
+      </div>
+    </section>
+
+    <% if (tetkikYetkisi && kayit.durum !== 'tamamlandi') { %>
+      <section class="kart">
+        <div class="kart-bas">
+          <div><h2>Plan Künyesini Düzenle</h2><p>Yıl, departman, kontrol listesi ve kapsam bilgilerini güncelleyin.</p></div>
+        </div>
+        <form method="post" action="/tetkik/<%= kayit.id %>" class="tetkik-duzenle-form">
+          <div class="form-grid">
+            <div class="alan">
+              <label for="duzenle-yil">Yıl</label>
+              <input class="girdi" type="number" id="duzenle-yil" name="yil" value="<%= kayit.yil %>" min="2000" max="2200" required>
+            </div>
+            <div class="alan">
+              <label for="duzenle-departman">Departman</label>
+              <select class="girdi" id="duzenle-departman" name="departman_id" required>
+                <% departmanlar.forEach(function (departman) { %>
+                  <option value="<%= departman.id %>" <%= Number(kayit.departman_id) === departman.id ? 'selected' : '' %>><%= departman.ad %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="alan">
+              <label for="duzenle-tarih">Planlanan Tarih</label>
+              <input class="girdi" type="date" id="duzenle-tarih" name="planlanan_tarih" value="<%= kayit.planlanan_tarih %>" required>
+            </div>
+            <div class="alan">
+              <label for="duzenle-checklist">Kontrol Listesi</label>
+              <select class="girdi" id="duzenle-checklist" name="checklist_id" required>
+                <% checklistler.forEach(function (checklist) { %>
+                  <option value="<%= checklist.id %>" <%= Number(kayit.checklist_id) === checklist.id ? 'selected' : '' %>><%= checklist.ad %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="alan">
+              <label for="duzenle-bas-denetci">Baş Denetçi</label>
+              <select class="girdi" id="duzenle-bas-denetci" name="bas_denetci_id" required>
+                <% kullanicilar.forEach(function (kisi) { %>
+                  <option value="<%= kisi.id %>" <%= Number(seciliBasDenetciId) === kisi.id ? 'selected' : '' %>><%= kisi.ad %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="alan tam">
+              <label for="duzenle-baslik">Başlık</label>
+              <input class="girdi" type="text" id="duzenle-baslik" name="baslik" value="<%= kayit.baslik %>" minlength="3" maxlength="200" required>
+            </div>
+            <div class="alan tam">
+              <label for="duzenle-amac">Amaç</label>
+              <textarea id="duzenle-amac" name="amac" minlength="5" maxlength="2000" rows="3" required><%= kayit.amac %></textarea>
+            </div>
+            <div class="alan tam">
+              <label for="duzenle-kapsam">Kapsam</label>
+              <textarea id="duzenle-kapsam" name="kapsam" minlength="5" maxlength="5000" rows="4" required><%= kayit.kapsam %></textarea>
+            </div>
+            <div class="alan tam">
+              <label for="duzenle-yontem">Yöntem</label>
+              <textarea id="duzenle-yontem" name="yontem" minlength="5" maxlength="2000" rows="3" required><%= kayit.yontem %></textarea>
+            </div>
+          </div>
+          <button class="btn btn-ikincil" type="submit">Plan Künyesini Kaydet</button>
+        </form>
+      </section>
+    <% } %>
+
+    <section class="kart tetkik-checklist-kart">
+      <div class="kart-bas">
+        <div>
+          <h2>Kontrol Listesi ve Madde Değerlendirmeleri</h2>
+          <p>Her madde Uygun, Minör Uygunsuzluk, Majör Uygunsuzluk veya Gözlem olarak değerlendirilir.</p>
+        </div>
+        <span class="rozet rozet-acik"><%= puan.degerlendirilen %>/<%= puan.toplam %> değerlendirildi</span>
+      </div>
+
+      <div class="tablo-sarmal tetkik-checklist-sarmal">
+        <table class="tablo tetkik-checklist-tablo">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Kontrol Maddesi / Kriter</th>
+              <th>Referans</th>
+              <th>Ağırlık</th>
+              <th>Sonuç</th>
+              <th>Puan</th>
+              <th>Açıklama / Kanıt</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% maddeler.forEach(function (madde) { %>
+              <tr class="<%= madde.sonuc ? 'tetkik-degerlendirilmis' : '' %>">
+                <td class="mono"><%= madde.sira %></td>
+                <td>
+                  <strong><%= madde.baslik %></strong>
+                  <small class="metin-kucuk metin-soluk"><%= madde.kriter %></small>
+                </td>
+                <td class="mono"><%= madde.referans || '—' %></td>
+                <td><%= madde.agirlik %></td>
+                <td>
+                  <% if (degerlendirmeAcik) { %>
+                    <select class="girdi" form="madde-form-<%= madde.id %>" name="sonuc" required aria-label="<%= madde.sira %>. madde sonucu">
+                      <option value="">— Seçin —</option>
+                      <% TETKIK_SONUC_ANAHTARLARI.forEach(function (anahtar) { %>
+                        <option value="<%= anahtar %>" <%= madde.sonuc === anahtar ? 'selected' : '' %>><%= TETKIK_SONUCLARI[anahtar] %></option>
+                      <% }) %>
+                    </select>
+                  <% } else { %>
+                    <span class="rozet <%= tetkikSonucSinifi(madde.sonuc) %>"><%= tetkikSonucEtiketi(madde.sonuc) %></span>
+                  <% } %>
+                </td>
+                <td>
+                  <% if (degerlendirmeAcik) { %>
+                    <input class="girdi tetkik-puan-girdi" form="madde-form-<%= madde.id %>" type="number" name="puan" value="<%= madde.puan == null ? '' : madde.puan %>" min="0" max="100" step="0.1" placeholder="Otomatik" aria-label="<%= madde.sira %>. madde puanı">
+                  <% } else { %>
+                    <span class="mono"><%= madde.puan == null ? '—' : Number(madde.puan).toFixed(1) %></span>
+                  <% } %>
+                </td>
+                <td>
+                  <% if (degerlendirmeAcik) { %>
+                    <textarea class="girdi" form="madde-form-<%= madde.id %>" name="bulgu_aciklama" rows="2" maxlength="3000" placeholder="Madde açıklaması…" aria-label="<%= madde.sira %>. madde açıklaması"><%= madde.bulgu_aciklama %></textarea>
+                    <input class="girdi" form="madde-form-<%= madde.id %>" type="text" name="kanit" value="<%= madde.kanit %>" maxlength="2000" placeholder="Kanıt / referans…" aria-label="<%= madde.sira %>. madde kanıtı">
+                  <% } else { %>
+                    <span><%= madde.bulgu_aciklama || '—' %></span>
+                    <% if (madde.kanit) { %><small class="metin-kucuk metin-soluk"><%= madde.kanit %></small><% } %>
+                  <% } %>
+                </td>
+                <td>
+                  <% if (degerlendirmeAcik) { %>
+                    <button class="btn btn-kucuk btn-birincil" type="submit" form="madde-form-<%= madde.id %>">Kaydet</button>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% maddeler.forEach(function (madde) { if (degerlendirmeAcik) { %>
+        <form id="madde-form-<%= madde.id %>" method="post" action="/tetkik/<%= kayit.id %>/maddeler/<%= madde.id %>" class="tetkik-gizli-form"></form>
+      <% } }) %>
+      <p class="metin-kucuk metin-soluk">Puan boş bırakılırsa sonuca göre otomatik değer kullanılır: Uygun 100, Minör 50, Majör 0, Gözlem 100.</p>
+    </section>
+  </div>
+
+  <aside class="dikey">
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Denetim Durumu</h2><p>Planlandı → Devam Ediyor → Tamamlandı akışı.</p></div>
+      </div>
+      <ol class="tetkik-akis">
+        <% ['planlandi', 'devam_ediyor', 'tamamlandi'].forEach(function (durum, indeks) { %>
+          <li class="<%= durum === kayit.durum ? 'aktif' : (['planlandi', 'devam_ediyor', 'tamamlandi'].indexOf(kayit.durum) > indeks ? 'tamam' : '') %>">
+            <span><%= indeks + 1 %></span><strong><%= TETKIK_DURUMLARI[durum] %></strong>
+          </li>
+        <% }) %>
+      </ol>
+      <div class="tetkik-durum-eylem">
+        <% if (kayit.durum === 'planlandi' && degerlendirmeYetkisi) { %>
+          <form method="post" action="/tetkik/<%= kayit.id %>/durum">
+            <button class="btn btn-birincil btn-tam" type="submit" name="durum" value="devam_ediyor">Denetimi Başlat</button>
+          </form>
+        <% } %>
+        <% if (tamamlanabilir) { %>
+          <form method="post" action="/tetkik/<%= kayit.id %>/durum" data-onay="İç tetkik tamamlanacak. Tüm maddelerin ve uygunsuzlukların değerlendirildiğinden emin misiniz?">
+            <button class="btn btn-basari btn-tam" type="submit" name="durum" value="tamamlandi">İç Tetkiki Tamamla</button>
+          </form>
+        <% } %>
+        <% if (kayit.durum === 'devam_ediyor' && !kapatmaYetkisi) { %>
+          <p class="metin-kucuk metin-soluk">Tetkiki tamamlamak için Kalite Yöneticisi yetkisi gerekir.</p>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>Denetçi Ekibi</h2><p>Atama ve kabul/tamamlama durumları.</p></div>
+      </div>
+      <div class="tetkik-denetci-liste">
+        <% denetciler.forEach(function (kisi) { %>
+          <div class="tetkik-denetci-satir">
+            <span class="avatar"><%= basHarfler(kisi.kullanici_ad) %></span>
+            <span>
+              <strong><%= kisi.kullanici_ad %></strong>
+              <small><%= tetkikDenetciGorevEtiketi(kisi.gorev) %><%= kisi.departman_ad ? ' · ' + kisi.departman_ad : '' %></small>
+            </span>
+            <span class="rozet"><%= tetkikDenetciDurumEtiketi(kisi.durum) %></span>
+          </div>
+        <% }) %>
+      </div>
+      <% if (tetkikYetkisi && kayit.durum !== 'tamamlandi') { %>
+        <form method="post" action="/tetkik/<%= kayit.id %>/denetciler" class="tetkik-denetci-form">
+          <div class="alan">
+            <label for="denetci-kullanici">Personel</label>
+            <select class="girdi" id="denetci-kullanici" name="kullanici_id" required>
+              <option value="">— Personel seçin —</option>
+              <% kullanicilar.forEach(function (kisi) { %>
+                <option value="<%= kisi.id %>"><%= kisi.ad %><%= kisi.departman_ad ? ' · ' + kisi.departman_ad : '' %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="alan">
+            <label for="denetci-gorev">Görev</label>
+            <select class="girdi" id="denetci-gorev" name="gorev">
+              <% TETKIK_DENETCI_GOREV_ANAHTARLARI.forEach(function (anahtar) { %>
+                <option value="<%= anahtar %>"><%= TETKIK_DENETCI_GOREVLERI[anahtar] %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="alan">
+            <label for="denetci-durum">Atama Durumu</label>
+            <select class="girdi" id="denetci-durum" name="durum">
+              <% TETKIK_DENETCI_DURUM_ANAHTARLARI.forEach(function (anahtar) { %>
+                <option value="<%= anahtar %>"><%= TETKIK_DENETCI_DURUMLARI[anahtar] %></option>
+              <% }) %>
+            </select>
+          </div>
+          <button class="btn btn-ikincil btn-tam" type="submit">Denetçiyi Ata / Güncelle</button>
+        </form>
+      <% } %>
+    </section>
+
+    <section class="kart">
+      <div class="kart-bas">
+        <div><h2>İlgili Kayıtlar</h2><p>Denetim, bulgu ve DÖF bağlantıları.</p></div>
+      </div>
+      <dl class="tanim-listesi">
+        <dt>Toplam madde</dt><dd><%= maddeler.length %></dd>
+        <dt>Değerlendirilen</dt><dd><%= puan.degerlendirilen %></dd>
+        <dt>Toplam bulgu</dt><dd><%= bulgular.length %></dd>
+        <dt>DÖF'e aktarılan</dt><dd><%= bulgular.filter(function (b) { return b.dof_id; }).length %></dd>
+      </dl>
+    </section>
+  </aside>
+</div>
+
+<section class="kart tetkik-bulgu-kart" id="tetkik-bulgulari">
+  <div class="kart-bas">
+    <div>
+      <h2>Bulgular ve DÖF Entegrasyonu</h2>
+      <p>Minör ve majör bulgular tek tıkla Faz 4 DÖF modülüne aktarılabilir; denetim ve bulgu referansları korunur.</p>
+    </div>
+    <span class="rozet rozet-acik"><%= bulgular.length %> bulgu</span>
+  </div>
+
+  <% if (bulgular.length) { %>
+    <div class="tablo-sarmal">
+      <table class="tablo tetkik-bulgu-tablo">
+        <thead>
+          <tr><th>Bulgu No</th><th>Başlık / Tanım</th><th>Sınıf</th><th>Departman / Sorumlu</th><th>Tespit</th><th>DÖF</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% bulgular.forEach(function (bulgu) { %>
+            <tr>
+              <td class="mono"><%= bulgu.kod %></td>
+              <td><strong><%= bulgu.baslik %></strong><small class="metin-kucuk metin-soluk"><%= bulgu.tanim %></small></td>
+              <td><span class="rozet <%= tetkikSonucSinifi(bulgu.sonuc) %>"><%= tetkikSonucEtiketi(bulgu.sonuc) %></span></td>
+              <td><%= bulgu.departman_ad || '—' %><small class="metin-kucuk metin-soluk"><%= bulgu.sorumlu_ad || 'Sorumlu atanmadı' %></small></td>
+              <td class="mono"><%= tarihTr(bulgu.tespit_tarihi) %></td>
+              <td>
+                <% if (bulgu.dof_id) { %>
+                  <a class="mono" href="/dof/<%= bulgu.dof_id %>"><%= bulgu.dof_kod %></a>
+                  <small class="metin-kucuk metin-soluk"><%= bulgu.dof_durum %></small>
+                <% } else { %>
+                  <span class="metin-soluk">—</span>
+                <% } %>
+              </td>
+              <td>
+                <% if (bulgu.dof_id) { %>
+                  <a class="btn btn-kucuk btn-hayalet" href="/dof/<%= bulgu.dof_id %>">DÖF Görüntüle</a>
+                <% } else if (['minor', 'major'].includes(bulgu.sonuc) && kayit.durum !== 'tamamlandi' && tetkikYetkisi) { %>
+                  <form method="post" action="/tetkik/<%= kayit.id %>/bulgular/<%= bulgu.id %>/dof" data-onay="Bu bulgu için yeni DÖF kaydı oluşturulsun mu?">
+                    <button class="btn btn-kucuk btn-birincil" type="submit">DÖF Oluştur</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <div class="bilgi-kutu">Bu iç tetkik için henüz bulgu kaydedilmemiş.</div>
+  <% } %>
+
+  <% if (degerlendirmeAcik) { %>
+    <details class="tetkik-bulgu-ekle" open>
+      <summary>Yeni bulgu kaydet</summary>
+      <form method="post" action="/tetkik/<%= kayit.id %>/bulgular" class="tetkik-yeni-bulgu-form">
+        <div class="form-grid">
+          <div class="alan">
+            <label for="bulgu-sonuc">Bulgu Sınıfı</label>
+            <select class="girdi" id="bulgu-sonuc" name="sonuc" required>
+              <option value="minor">Minör Uygunsuzluk</option>
+              <option value="major">Majör Uygunsuzluk</option>
+              <option value="gozlem">Gözlem</option>
+            </select>
+          </div>
+          <div class="alan">
+            <label for="bulgu-madde">İlgili Kontrol Maddesi</label>
+            <select class="girdi" id="bulgu-madde" name="madde_id">
+              <option value="">— Madde seçilmedi —</option>
+              <% maddeler.forEach(function (madde) { %>
+                <option value="<%= madde.id %>"><%= madde.sira %>. <%= madde.baslik %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="alan">
+            <label for="bulgu-departman">Departman</label>
+            <select class="girdi" id="bulgu-departman" name="departman_id" required>
+              <% departmanlar.forEach(function (departman) { %>
+                <option value="<%= departman.id %>" <%= Number(kayit.departman_id) === departman.id ? 'selected' : '' %>><%= departman.ad %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="alan">
+            <label for="bulgu-sorumlu">Sorumlu</label>
+            <select class="girdi" id="bulgu-sorumlu" name="sorumlu_id">
+              <option value="">— Sorumlu seçilmedi —</option>
+              <% kullanicilar.forEach(function (kisi) { %>
+                <option value="<%= kisi.id %>"><%= kisi.ad %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="alan">
+            <label for="bulgu-tarih">Tespit Tarihi</label>
+            <input class="girdi" type="date" id="bulgu-tarih" name="tespit_tarihi" value="<%= bugun %>" required>
+          </div>
+          <div class="alan tam">
+            <label for="bulgu-baslik">Bulgu Başlığı</label>
+            <input class="girdi" type="text" id="bulgu-baslik" name="baslik" minlength="3" maxlength="240" required>
+          </div>
+          <div class="alan tam">
+            <label for="bulgu-tanim">Bulgu Tanımı</label>
+            <textarea class="girdi" id="bulgu-tanim" name="tanim" minlength="10" maxlength="5000" rows="4" required></textarea>
+          </div>
+        </div>
+        <button class="btn btn-birincil" type="submit">Bulgu Kaydet</button>
+      </form>
+    </details>
+  <% } %>
+</section>
+
+<section class="kart">
+  <div class="kart-bas">
+    <div><h2>Aktivite İzi</h2><p>Planlama, atama, değerlendirme, bulgu ve DÖF aktarım işlemleri değiştirilemez şekilde kaydedilir.</p></div>
+    <span class="rozet"><%= aktiviteler.length %> işlem</span>
+  </div>
+  <% if (aktiviteler.length) { %>
+    <ol class="aktivite-liste">
+      <% aktiviteler.forEach(function (log) { %>
+        <li>
+          <span class="aktivite-nokta"></span>
+          <div>
+            <strong><%= log.aciklama %></strong>
+            <small><%= log.kullanici_ad || 'Sistem' %> · <%= zamanTr(log.tarih) %><%= log.referans_no ? ' · ' + log.referans_no : '' %></small>
+          </div>
+        </li>
+      <% }) %>
+    </ol>
+  <% } else { %>
+    <p class="metin-soluk">Henüz aktivite kaydı yok.</p>
+  <% } %>
+</section>
+
+<%- include('partials/alt') %>

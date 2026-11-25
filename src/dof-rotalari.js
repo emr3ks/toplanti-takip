@@ -111,7 +111,13 @@ function dofGetir(db, id) {
               doc.durum AS dokuman_durum,
               o.ad AS olusturan_ad,
               o.email AS olusturan_email,
-              k.ad AS kapatan_ad
+              k.ad AS kapatan_ad,
+              (SELECT t.id FROM ic_tetkik_bulgulari ib
+                JOIN ic_tetkikler t ON t.id = ib.tetkik_id WHERE ib.dof_id = d.id) AS tetkik_id,
+              (SELECT t.kod FROM ic_tetkik_bulgulari ib
+                JOIN ic_tetkikler t ON t.id = ib.tetkik_id WHERE ib.dof_id = d.id) AS tetkik_kod,
+              (SELECT ib.kod FROM ic_tetkik_bulgulari ib
+                WHERE ib.dof_id = d.id) AS tetkik_bulgu_kod
        FROM dof_kayitlari d
        LEFT JOIN departmanlar dep ON dep.id = d.departman_id
        LEFT JOIN dokumanlar doc ON doc.id = d.dokuman_id

@@ -1,0 +1,110 @@
+<%- include('partials/ust', { aktifSayfa: 'tetkik-yeni' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Yeni İç Tetkik Planı</h1>
+    <p>Departman bazlı yıllık denetim planı oluşturun, kontrol listesini ve denetçi ekibini atayın.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/tetkik">İç Tetkik Listesine Dön</a>
+  </div>
+</div>
+
+<form method="post" action="/tetkik/yeni" class="kart tetkik-yeni-form">
+  <div class="kart-bas">
+    <div>
+      <h2>Plan Künyesi</h2>
+      <p>Referans numarası <strong class="mono"><%= onKod %></strong> olarak otomatik üretilir.</p>
+    </div>
+    <span class="rozet tetkik-durum-planlandi">Planlandı</span>
+  </div>
+
+  <div class="form-grid">
+    <div class="alan">
+      <label for="yeni-tetkik-yil">Denetim Yılı <span class="zorunlu-yazi">*</span></label>
+      <input class="girdi" type="number" id="yeni-tetkik-yil" name="yil" value="<%= yil %>" min="2000" max="2200" required>
+    </div>
+    <div class="alan">
+      <label for="yeni-tetkik-departman">Denetlenecek Departman <span class="zorunlu-yazi">*</span></label>
+      <select class="girdi" id="yeni-tetkik-departman" name="departman_id" required>
+        <option value="">— Departman seçin —</option>
+        <% departmanlar.forEach(function (departman) { %>
+          <option value="<%= departman.id %>"><%= departman.ad %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan">
+      <label for="yeni-tetkik-tarih">Planlanan Tarih <span class="zorunlu-yazi">*</span></label>
+      <input class="girdi" type="date" id="yeni-tetkik-tarih" name="planlanan_tarih" value="<%= bugun %>" required>
+    </div>
+    <div class="alan">
+      <label for="yeni-tetkik-checklist">Kontrol Listesi <span class="zorunlu-yazi">*</span></label>
+      <select class="girdi" id="yeni-tetkik-checklist" name="checklist_id" required>
+        <option value="">— Kontrol listesi seçin —</option>
+        <% checklistler.forEach(function (checklist) { %>
+          <option value="<%= checklist.id %>"><%= checklist.ad %> · <%= TETKIK_STANDARTLARI[checklist.standart] %> · <%= checklist.madde_sayisi %> madde</option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan tam">
+      <label for="yeni-tetkik-baslik">Tetkik Başlığı <span class="zorunlu-yazi">*</span></label>
+      <input class="girdi" type="text" id="yeni-tetkik-baslik" name="baslik" minlength="3" maxlength="200" required placeholder="Örn. 2026 Üretim Süreçleri İç Tetkik Planı">
+    </div>
+    <div class="alan tam">
+      <label for="yeni-tetkik-amac">Denetim Amacı <span class="zorunlu-yazi">*</span></label>
+      <textarea id="yeni-tetkik-amac" name="amac" minlength="5" maxlength="2000" rows="3" required placeholder="Denetimin ulaşmak istediği amacı yazın…"></textarea>
+    </div>
+    <div class="alan tam">
+      <label for="yeni-tetkik-kapsam">Kapsam <span class="zorunlu-yazi">*</span></label>
+      <textarea id="yeni-tetkik-kapsam" name="kapsam" minlength="5" maxlength="5000" rows="4" required placeholder="Denetlenecek süreç, ürün, alan, lokasyon ve dönem…"></textarea>
+    </div>
+    <div class="alan tam">
+      <label for="yeni-tetkik-yontem">Denetim Yöntemi <span class="zorunlu-yazi">*</span></label>
+      <textarea id="yeni-tetkik-yontem" name="yontem" minlength="5" maxlength="2000" rows="3" required placeholder="Belge incelemesi, saha gözlemi, görüşme, kayıt örnekleme…"></textarea>
+    </div>
+  </div>
+
+  <hr class="ayirici-cizgi">
+
+  <div class="kart-bas">
+    <div>
+      <h2>Denetçi Ekibi</h2>
+      <p>Baş denetçi zorunludur. Denetçi ve gözlemci ekipleri isteğe bağlıdır.</p>
+    </div>
+  </div>
+  <div class="form-grid">
+    <div class="alan">
+      <label for="yeni-tetkik-bas-denetci">Baş Denetçi <span class="zorunlu-yazi">*</span></label>
+      <select class="girdi" id="yeni-tetkik-bas-denetci" name="bas_denetci_id" required>
+        <option value="">— Baş denetçi seçin —</option>
+        <% kullanicilar.forEach(function (kisi) { %>
+          <option value="<%= kisi.id %>"><%= kisi.ad %><%= kisi.departman_ad ? ' · ' + kisi.departman_ad : '' %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="alan">
+      <label for="yeni-tetkik-denetci">Denetçiler</label>
+      <select class="girdi" id="yeni-tetkik-denetci" name="denetci_id" multiple size="6">
+        <% kullanicilar.forEach(function (kisi) { %>
+          <option value="<%= kisi.id %>"><%= kisi.ad %><%= kisi.departman_ad ? ' · ' + kisi.departman_ad : '' %></option>
+        <% }) %>
+      </select>
+      <span class="ipucu">Ctrl/Cmd ile birden fazla kullanıcı seçebilirsiniz.</span>
+    </div>
+    <div class="alan">
+      <label for="yeni-tetkik-gozlemci">Gözlemciler</label>
+      <select class="girdi" id="yeni-tetkik-gozlemci" name="gozlemci_id" multiple size="6">
+        <% kullanicilar.forEach(function (kisi) { %>
+          <option value="<%= kisi.id %>"><%= kisi.ad %><%= kisi.departman_ad ? ' · ' + kisi.departman_ad : '' %></option>
+        <% }) %>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-eylem">
+    <a class="btn btn-hayalet" href="/tetkik">Vazgeç</a>
+    <button class="btn btn-birincil" type="submit">İç Tetkik Planını Oluştur</button>
+  </div>
+</form>
+
+<%- include('partials/alt') %>

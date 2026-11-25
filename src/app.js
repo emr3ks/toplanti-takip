@@ -37,6 +37,7 @@ const qdms = require('./qdms');
 const { pdfUret, logoVerisiCoz } = require('./pdf');
 const bildirimler = require('./bildirimler');
 const { dofOzeti } = require('./dof-rotalari');
+const { tetkikOzeti } = require('./tetkik-rotalari');
 
 const SAYFA_ADLARI = Object.freeze({
   dashboard: 'Genel Bakış',
@@ -50,6 +51,11 @@ const SAYFA_ADLARI = Object.freeze({
   dof: 'DÖF Yönetimi',
   'dof-yeni': 'Yeni DÖF',
   'dof-detay': 'DÖF Detayı',
+  tetkik: 'İç Tetkik Yönetimi',
+  'tetkik-yeni': 'Yeni İç Tetkik',
+  'tetkik-detay': 'İç Tetkik Detayı',
+  'tetkik-takvim': 'İç Tetkik Takvimi',
+  'tetkik-checklistler': 'Denetim Kontrol Listeleri',
   raporlar: 'Raporlar',
   organizasyon: 'Organizasyon ve Kullanıcılar',
   emailler: 'E-posta Günlüğü',
@@ -635,6 +641,12 @@ function createApp({ db, config, mailService = null }) {
       .all(...gorunurluk.parametreler);
 
     const dofOzet = dofOzeti(db, kullanici, auth.yetkiliMi(kullanici, 'dof'), res.locals.bugunIso);
+    const tetkikOzet = tetkikOzeti(
+      db,
+      kullanici,
+      auth.yetkiliMi(kullanici, 'tetkik'),
+      Number(res.locals.bugunIso.slice(0, 4))
+    );
 
     res.render('genel-bakis', {
       aktifSayfa: 'dashboard',
@@ -649,6 +661,7 @@ function createApp({ db, config, mailService = null }) {
       turSayilari,
       onaylayabilir,
       dofOzet,
+      tetkikOzet,
     });
   });
 
@@ -1495,6 +1508,7 @@ function createApp({ db, config, mailService = null }) {
   require('./egitim-rotalari').egitimRotalariniKur(app, { db, auth, mail, config });
   require('./rapor-rotalari').raporRotalariniKur(app, { db, auth, mail, config });
   require('./dof-rotalari').dofRotalariniKur(app, { db, auth, mail, config });
+  require('./tetkik-rotalari').tetkikRotalariniKur(app, { db, auth, mail, config });
 
   // -------------------------------------------------------------------------
   // Organizasyon ve kullanıcılar

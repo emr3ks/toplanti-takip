@@ -30,5 +30,8 @@ jobs:
       - name: Bağımlılıkları kur
         run: npm ci
 
+      - name: Derleme ve sözdizimi kontrolü
+        run: npm run build
+
       - name: Testleri çalıştır
         run: npm test

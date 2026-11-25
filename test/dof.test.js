@@ -242,7 +242,7 @@ test('DÖF tabloları, sütunları ve şema sürümü hazırdır', () => {
     assert.ok(aksiyonKolonlari.includes(kolon), `${kolon} sütunu bulunmalı`);
   }
 
-  assert.equal(db().prepare('PRAGMA user_version').get().user_version, 5);
+  assert.equal(db().prepare('PRAGMA user_version').get().user_version, 6);
 });
 
 test('GET /dof DÖF ana listesini ve özet sayaçları gösterir', async () => {

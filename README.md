@@ -1,6 +1,6 @@
 # QDMS — Kurumsal Kalite Yönetim Sistemi
 
-Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bir **Kalite Yönetim Sistemi (QDMS)**. Kullanıcı ve rol yönetimi, departmanlar, doküman şablonları, otomatik antetli PDF üretimi, çok aşamalı onay, revizyon geçmişi, **“Okudum, Anladım”** takibi, **eğitim yönetimi**, **DÖF (Düzeltici ve Önleyici Faaliyetler) yönetimi**, **CSV/Excel kurumsal raporları** ve **otomatik e-posta bildirimleri** Faz 1–4 kapsamında hazırdır. Uygulama yalnızca QDMS arayüzü sunar; eski **Toplantı ve Aksiyon Takibi** modülü kaldırılmıştır.
+Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bir **Kalite Yönetim Sistemi (QDMS)**. Kullanıcı ve rol yönetimi, departmanlar, doküman şablonları, otomatik antetli PDF üretimi, çok aşamalı onay, revizyon geçmişi, **“Okudum, Anladım”** takibi, **eğitim yönetimi**, **DÖF (Düzeltici ve Önleyici Faaliyetler) yönetimi**, **iç tetkik (denetim) yönetimi**, **CSV/Excel kurumsal raporları** ve **otomatik e-posta bildirimleri** Faz 1–5 kapsamında hazırdır. Uygulama yalnızca QDMS arayüzü sunar; eski **Toplantı ve Aksiyon Takibi** modülü kaldırılmıştır.
 
 ## Öne Çıkanlar
 
@@ -14,6 +14,7 @@ Yerel bilgisayarda çalışan, SQLite üzerinde saklanan, Türkçe arayüzlü bi
 - **Dağıtım ve okuma takibi:** Doküman yayınlandığında seçilen departman personeline bildirim ve e-posta düşer; personel “Okudum, Anladım” onayı verir. Kalite yöneticisi yüzdelik ve isim listesiyle takip eder.
 - **Eğitim yönetimi:** Yıllık eğitim planı, iç/dış eğitim türü, eğitmen, süre, ilgili kalite dokümanı; personel/departman bazında katılımcı atama; katılım, puan ve etkinlik sonuçları; personel eğitim sicili.
 - **DÖF yönetimi:** Otomatik `DOF-YYYY-NNN` kodlama; uygunsuzluk kaynağı, departman, talep eden, tespit tarihi ve ilgili kalite dokümanı; 5 Neden/kök neden ve acil önlem; çok maddeli aksiyon planı (sorumlu, hedef tarih, durum, kanıt dosyası); `Açık → Kök Neden & Aksiyon Aşamasında → Etkinlik Kontrolü Bekliyor → Kapandı` akışı; antetli DÖF raporu PDF’i; dashboard özeti ve CSV/XLSX listesi.
+- **İç tetkik yönetimi:** Yıllık departman bazlı denetim takvimi; baş denetçi/denetçi/gözlemci ataması ve atama durumu; ISO 9001 ve kurum içi kontrol listeleri; `Uygun`, `Minör Uygunsuzluk`, `Majör Uygunsuzluk`, `Gözlem` sonuçlarıyla ağırlıklı puanlama; `BUL-YYYY-NNN` bulgu kaydı; bulguların tek tıkla referansları korunarak Faz 4 DÖF modülüne aktarılması; kurumsal logolu PDF denetim raporu ve değiştirilemez aktivite izi.
 - **Kurumsal raporlama:** Güncel doküman ana listesi, okundu onayı matrisi ve yıllık eğitim matrisi; tümü **CSV** ve gerçek **XLSX** olarak indirilebilir.
 - **Otomatik e-postalar:** Onaya gönderimde onaylayanlara, yayında hedef departman personeline ve yaklaşan eğitimlerde katılımcılara e-posta. SMTP tanımlı değilse uygulama hata vermez; e-postalar test modunda outbox’a ve E-posta Günlüğü’ne kaydedilir.
 - **İsteğe bağlı hazır dosya:** Sistem PDF’i üretmek yerine PDF/Excel dosyası yüklenebilir.
@@ -147,13 +148,15 @@ Tarayıcıda **http://127.0.0.1:3005** adresini açın. Farklı bir port için `
 
 | Rol | Yetkiler |
 | --- | --- |
-| **Sistem Yöneticisi** (`admin`) | Tüm modüller, kullanıcı/departman yönetimi, şirket ve SMTP ayarları, onay ve arşivleme, eğitim yönetimi, DÖF yönetimi ve kapatma, raporlar |
-| **Kalite Yöneticisi** (`kalite`) | Şablon tasarımı, doküman oluşturma/düzenleme, onaylama, dağıtım ve okuma takibi, eğitim yönetimi, DÖF yönetimi ve kapatma, raporlar |
+| **Sistem Yöneticisi** (`admin`) | Tüm modüller, kullanıcı/departman yönetimi, şirket ve SMTP ayarları, onay ve arşivleme, eğitim yönetimi, DÖF yönetimi ve kapatma, iç tetkik planlama/tamamlama, raporlar |
+| **Kalite Yöneticisi** (`kalite`) | Şablon tasarımı, doküman oluşturma/düzenleme, onaylama, dağıtım ve okuma takibi, eğitim yönetimi, DÖF yönetimi ve kapatma, iç tetkik planlama/tamamlama, raporlar |
 | **Doküman Hazırlayan** (`hazirlayan`) | Doküman oluşturma, kendi taslaklarını düzenleme ve onaya gönderme; eğitim planını, kendi sicilini ve departmanının DÖF kayıtlarını görüntüleme |
 | **Onaylayan** (`onaylayan`) | Kontrol / onay bekleyen dokümanları onaylama veya iade etme; eğitim planını, kendi sicilini ve departmanının DÖF kayıtlarını görüntüleme |
 | **Standart Kullanıcı** (`kullanici`) | Kendisine dağıtılan yayınlanmış dokümanları okuma, “Okudum, Anladım” onayı verme, kendi eğitim sicilini görüntüleme; departmanına ait veya aksiyon sorumlusu olduğu DÖF kayıtlarını görüntüleme ve kendi aksiyonunun durumunu güncelleme |
 
 DÖF görünürlüğü: Sistem Yöneticisi ve Kalite Yöneticisi tüm kayıtları görür; diğer kullanıcılar yalnızca kendi departmanlarının, kendilerinin açtığı veya aksiyon sorumlusu oldukları DÖF kayıtlarını görüntüler. Yetkisiz sayfalara erişim `403`, oturum yoksa giriş ekranına yönlendirme ile korunur. Tüm POST işlemleri oturum gerektirir.
+
+İç tetkik görünürlüğü aynı ilkeyi izler: Sistem Yöneticisi ve Kalite Yöneticisi tüm tetkikleri yönetir; diğer kullanıcılar yalnızca kendi departmanlarına ait, kendi oluşturdukları veya denetçi olarak atandıkları tetkikleri görüntüler. Atanmış denetçi, kendi tetkikindeki maddeleri değerlendirebilir ve bulgu kaydedebilir; DÖF açma ve tetkik tamamlama yetkileri Kalite Yöneticisi/Sistem Yöneticisi ile sınırlıdır.
 
 ## Modüller
 
@@ -260,6 +263,17 @@ DÖF görünürlüğü: Sistem Yöneticisi ve Kalite Yöneticisi tüm kayıtlar�
 - **Liste, filtreler ve dışa aktarma:** Durum, tür, kaynak, departman ve geciken filtreleri; DÖF ana listesinin CSV ve gerçek XLSX çıktısı. Dışa aktarma yalnızca `dof` yetkisi olan kullanıcılara açıktır.
 - **Bildirimler:** DÖF açıldığında ilgili departmanın aktif personeline, aksiyon atandığında sorumluya uygulama içi bildirim ve SMTP e-postası gider; SMTP yoksa test modunda outbox ve E-posta Günlüğü’ne kaydedilir. Sorumlu personel kendi aksiyonunun durumunu ve kanıtını güncelleyebilir.
 
+### 13. İç Tetkik (Denetim) Yönetimi (Faz 5)
+
+- **Yıllık takvim ve planlama:** Denetim yılı, denetlenecek departman, başlık, amaç, kapsam, yöntem ve planlanan tarihle `IT-YYYY-NNN` referanslı plan oluşturulur. Liste ekranı yıl/durum/departman/arama filtreleriyle, ay ay takvim ekranıyla birlikte kullanılır.
+- **Denetçi ekibi ve durum takibi:** Baş denetçi, denetçi ve gözlemci atanır; atama, kabul ve tamamlama durumları ayrı ayrı izlenir. Atanmış denetçi kaydı, ilgili departmandaki personel ve planı oluşturan kullanıcı görüntüleyebilir.
+- **Kontrol listeleri:** Hazır ISO 9001 ve kurum içi listelerle birlikte yeni, çok maddeli kontrol listeleri oluşturulabilir. Plan oluşturulurken listenin maddeleri denetime snapshot olarak kopyalanır; sonradan şablon değişikliği geçmiş denetimi bozmaz.
+- **Madde bazlı değerlendirme:** Her madde `Uygun`, `Minör Uygunsuzluk`, `Majör Uygunsuzluk` veya `Gözlem` olarak değerlendirilir. Ağırlıklar kullanılarak 0–100 aralığında genel uyumluluk puanı hesaplanır; puan boş bırakılırsa sonuca göre varsayılan değer kullanılır.
+- **Bulgu ve DÖF entegrasyonu:** Tespitler `BUL-YYYY-NNN` referansıyla bulgu olarak kaydedilir. Minör/majör bulgular tek tıkla, `IT-YYYY-NNN / BUL-YYYY-NNN` referansları DÖF tanımına işlenerek atomik biçimde Faz 4 DÖF modülüne aktarılır. Aynı bulgu ikinci kez DÖF oluşturmaz; DÖF detayından iç tetkik/bulgu bağlantısına dönülebilir.
+- **Tamamlama kontrolleri:** Tetkik ancak bütün maddeler değerlendirilmiş, uygunsuzluk maddeleri için bulgu kaydedilmiş ve minör/majör bulgular DÖF'e bağlanmışsa `Tamamlandı` durumuna geçebilir.
+- **PDF denetim raporu:** Kurumsal logolu A4 raporda tetkik künyesi, amaç/kapsam/yöntem, genel puan, dört sonuç dağılımı, bütün checklist sonuçları, bulgular ve açılan DÖF referansları bulunur. Sayfa sonunda baş denetçi ve tamamlayan imza kutuları yer alır.
+- **Aktivite izi:** Plan oluşturma/güncelleme, denetçi atama, durum, madde değerlendirmesi, bulgu ve DÖF aktarımı ortak `aktivite_loglari` tablosuna kullanıcı/tarih/eski-yeni değer bilgisiyle yazılır.
+
 ## PDF Tasarımı
 
 - A4 dikey sayfa, kurumsal antet bandı, **sol üstte şirket/şablon logosu için ayrı kutu** ve sağda şirket adı.
@@ -271,6 +285,7 @@ DÖF görünürlüğü: Sistem Yöneticisi ve Kalite Yöneticisi tüm kayıtlar�
 - Logo; yüklenen PNG/JPG dosyasından veya Base64/data-URI verisinden okunur, en-boy oranı korunarak kutuya sığdırılır. WEBP gibi PDFKit’in çözemediği formatlar sessizce atlanmaz; yükleme reddedilir ve mevcut kayıt için uyarı gösterilir.
 - Türkçe karakterler için Unicode TTF gömülür; font bulunamazsa güvenli bir yedek yazı tipi ve Türkçe karakter dönüşümü kullanılır.
 - **DÖF raporu** ayrı bir antetli form olarak üretilir: kırmızı kurumsal antet bandı, logo kutusu ve şirket adı; DÖF No, tür, durum ve tespit tarihi tablosu; künye, uygunsuzluk tanımı, acil önlem, kök neden, aksiyon tablosu (sorumlu, hedef tarih, durum, kanıt) ve etkinlik değerlendirmesi/kapanış imza kutuları. Aksiyon tablosu sayfa sonunda bölünebilir ve her yeni sayfada antet yeniden basılır.
+- **İç tetkik raporu** kurumsal logo kutusu ve renkli antetle üretilir; tetkik künyesi, yöntem özeti, puan/sonuç dağılımı, sayfalara bölünen bütün checklist ve bulgu tabloları, DÖF referansları ve iki imza kutusu içerir.
 
 ## Demo Verisi
 
@@ -287,7 +302,7 @@ Mevcut demo verilerini silip yeniden oluşturmak için:
 npm run demo -- --sifirla
 ```
 
-Demo komutu; örnek kullanıcıları, departman atamalarını, şablon kontrollü dokümanları, revizyonları, onay bekleyen kayıtları, okuma durumlarını, **eğitim planı/katılım sonuçlarını** ve **örnek DÖF kayıtları/aksiyonlarını** oluşturur. E-posta ayarları **test modunda** kaydedilir; gerçek e-posta gönderilmez.
+Demo komutu; örnek kullanıcıları, departman atamalarını, şablon kontrollü dokümanları, revizyonları, onay bekleyen kayıtları, okuma durumlarını, **eğitim planı/katılım sonuçlarını**, **örnek DÖF kayıtları/aksiyonlarını** ve **planlanmış/devam ediyor/tamamlanmış iç tetkik planları ile bulguları** oluşturur. Tamamlanmış örnek iç tetkik, bir `İç Tetkik` kaynaklı DÖF ile referansları üzerinden bağlıdır. E-posta ayarları **test modunda** kaydedilir; gerçek e-posta gönderilmez.
 
 ### Demo Giriş Bilgileri
 
@@ -327,7 +342,16 @@ Testler şunları kapsar:
 - CSV/XLSX üreticisinin biçim, kaçış ve boş veri davranışı
 - DÖF tabloları, otomatik `DOF-YYYY-NNN` kodlama, görünürlük, kök neden ve aksiyon akışı, kanıt yükleme/indirme, etkinlik kontrolü ve kapatma
 - DÖF PDF raporu, CSV/XLSX listesi, dashboard özet kartı ve DÖF e-posta bildirimleri (test modu)
+- İç tetkik şeması, yıllık plan/takvim, RBAC ve kayıt görünürlüğü, denetçi ataması, dört sonuçlu puanlama, bulgu → DÖF referanslı tek tıkla aktarım ve idempotency, tamamlama kontrolleri, aktivite izi ve kurumsal logolu PDF raporu
 - Kaldırılan toplantı/aksiyon sayfalarının artık 404 döndürmesi ve menüde görünmemesi
+
+### Derleme / Sözdizimi Kontrolü
+
+Bu sunucu tarafı uygulamasında ayrı paketleme adımı bulunmaz. `build` komutu bütün JavaScript kaynaklarını Node.js'in `--check` ayrıştırıcısından geçirir:
+
+```bash
+npm run build
+```
 
 ## Proje Yapısı
 
@@ -342,6 +366,8 @@ Testler şunları kapsar:
 │   ├── pdf.js                # PDFKit ile antetli/filigranlı doküman ve DÖF PDF üretimi
 │   ├── dof.js                # DÖF tür/kaynak/durum sabitleri, kodlama ve görünürlük yardımcıları
 │   ├── dof-rotalari.js       # DÖF kayıt/aksiyon/kapatma, kanıt, PDF ve CSV/XLSX rotaları
+│   ├── tetkik.js             # Faz 5 iç tetkik sabitleri, kodlama, görünürlük ve puanlama
+│   ├── tetkik-rotalari.js    # Plan/takvim, checklist, değerlendirme, bulgu, DÖF ve PDF rotaları
 │   ├── egitim-rotalari.js    # Eğitim planı, katılımcı, sonuç ve personel sicili rotaları
 │   ├── rapor-rotalari.js     # Doküman/okundu/eğitim raporları ve CSV/XLSX indirme
 │   ├── disa-aktarma.js       # Bağımlılıksız CSV ve gerçek XLSX üretici
@@ -355,10 +381,10 @@ Testler şunları kapsar:
 │   ├── dogrulama.js          # Form ve e-posta doğrulama
 │   ├── settings.js           # Ayar okuma/yazma, şirket kimliği
 │   └── sabitler.js           # E-posta durum ve tür etiketleri
-├── views/                    # EJS sayfaları ve partial'lar (DÖF: dof, dof-yeni, dof-detay)
+├── views/                    # EJS sayfaları ve partial'lar (DÖF + iç tetkik ekranları)
 ├── public/                   # CSS (styles, egitim, raporlar, dof), JS, favicon
-├── scripts/demo-verisi.js    # Örnek QDMS verisi (doküman + eğitim + DÖF)
-├── test/                     # node:test testleri (dof.test.js dahil)
+├── scripts/demo-verisi.js    # Örnek QDMS verisi (doküman + eğitim + DÖF + iç tetkik)
+├── test/                     # node:test testleri (dof.test.js ve tetkik.test.js dahil)
 ├── docs/screenshots/         # Önce/sonra ekran görüntüleri
 ├── data/                     # SQLite, outbox ve yüklemeler (gitignore)
 └── .github/workflows/test.yml
@@ -380,6 +406,12 @@ Testler şunları kapsar:
 - `egitim_katilimcilari`: `egitim_id`, `kullanici_id`, `katilim_durumu`, `degerlendirme_puani` (0–100), `etkinlik_durumu`, `sertifika_no`, `not_metni`, `hatirlatma_tarihi`
 - `dof_kayitlari`: `kod` (`DOF-YYYY-NNN`), `tur` (`duzeltici`/`onleyici`), `kaynak`, `departman_id`, `talep_eden`, `tespit_tarihi`, `uygunsuzluk_tanimi`, `dokuman_id`, `kok_neden`, `acil_onlem`, `durum` (`acik`/`kok_neden`/`etkinlik_bekliyor`/`kapandi`), `etkinlik_degerlendirmesi`, `kapatan_id`, `kapanis_tarihi`, `olusturan_id`
 - `dof_aksiyonlari`: `dof_id`, `sira`, `aciklama`, `sorumlu_id`, `hedef_tarih`, `durum` (`acik`/`devam_ediyor`/`tamamlandi`/`gecikti`), `kanit_aciklama`, `kanit_dosya`, `kanit_dosya_adi`, `tamamlanma_tarihi`
+- `ic_tetkikler`: `kod` (`IT-YYYY-NNN`), `yil`, `checklist_id`, `departman_id`, plan/amaç/kapsam/yöntem, tarihler, `durum` (`planlandi`/`devam_ediyor`/`tamamlandi`), oluşturan/tamamlayan
+- `ic_tetkik_checklistleri` / `ic_tetkik_checklist_maddeleri`: ISO 9001/kurum içi kontrol listeleri, ağırlıklı maddeler
+- `ic_tetkik_denetcileri`: tetkik–kullanıcı ataması, görev ve atama/kabul/tamamlama durumu
+- `ic_tetkik_maddeleri`: denetime snapshotlanan madde, sonuç, puan, açıklama, kanıt ve değerlendiren bilgisi
+- `ic_tetkik_bulgulari`: `kod` (`BUL-YYYY-NNN`), bulgu sınıfı, sorumlu/departman, durum ve benzersiz `dof_id` bağlantısı
+- `aktivite_loglari`: modül, işlem, kayıt kimliği/referansı, kullanıcı, eski/yeni değer ve tarih
 - `ayarlar`, `email_kayitlari`: sistem ayarları ve e-posta günlüğü
 
 Doküman kodları `(kod, revizyon)` çiftinde benzersizdir; aynı kodun farklı revizyonları geçmiş olarak saklanır. Yabancı anahtarlar açıktır (`PRAGMA foreign_keys = ON`).

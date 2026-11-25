@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 const { varsayilanVerileriYukle } = require('./varsayilanlar');
+const { varsayilanTetkikVerileriniYukle } = require('./tetkik');
 
 const SEMA = `
 CREATE TABLE IF NOT EXISTS ayarlar (
@@ -230,6 +231,139 @@ CREATE TABLE IF NOT EXISTS dof_aksiyonlari (
 CREATE INDEX IF NOT EXISTS idx_dof_aksiyonlari_dof ON dof_aksiyonlari (dof_id);
 CREATE INDEX IF NOT EXISTS idx_dof_aksiyonlari_sorumlu ON dof_aksiyonlari (sorumlu_id);
 CREATE INDEX IF NOT EXISTS idx_dof_aksiyonlari_hedef ON dof_aksiyonlari (hedef_tarih);
+
+-- ---------------------------------------------------------------------------
+-- Faz 5: İç Tetkik (Denetim) Yönetimi
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ic_tetkik_checklistleri (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kod TEXT NOT NULL UNIQUE,
+  ad TEXT NOT NULL,
+  standart TEXT NOT NULL DEFAULT 'kurum_ici'
+    CHECK (standart IN ('iso_9001', 'kurum_ici')),
+  aciklama TEXT NOT NULL DEFAULT '',
+  versiyon TEXT NOT NULL DEFAULT '1.0',
+  aktif INTEGER NOT NULL DEFAULT 1 CHECK (aktif IN (0, 1)),
+  olusturan_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  olusturma_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  guncelleme_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS idx_tetkik_checklistleri_standart ON ic_tetkik_checklistleri (standart, aktif);
+
+CREATE TABLE IF NOT EXISTS ic_tetkik_checklist_maddeleri (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  checklist_id INTEGER NOT NULL REFERENCES ic_tetkik_checklistleri (id) ON DELETE CASCADE,
+  sira INTEGER NOT NULL DEFAULT 0,
+  baslik TEXT NOT NULL,
+  kriter TEXT NOT NULL,
+  referans TEXT NOT NULL DEFAULT '',
+  agirlik INTEGER NOT NULL DEFAULT 1 CHECK (agirlik BETWEEN 1 AND 10),
+  zorunlu INTEGER NOT NULL DEFAULT 1 CHECK (zorunlu IN (0, 1))
+);
+CREATE INDEX IF NOT EXISTS idx_tetkik_checklist_maddeleri ON ic_tetkik_checklist_maddeleri (checklist_id, sira);
+
+CREATE TABLE IF NOT EXISTS ic_tetkikler (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kod TEXT NOT NULL UNIQUE,
+  yil INTEGER NOT NULL CHECK (yil BETWEEN 2000 AND 2200),
+  checklist_id INTEGER REFERENCES ic_tetkik_checklistleri (id) ON DELETE SET NULL,
+  baslik TEXT NOT NULL,
+  amac TEXT NOT NULL DEFAULT '',
+  kapsam TEXT NOT NULL DEFAULT '',
+  yontem TEXT NOT NULL DEFAULT '',
+  departman_id INTEGER REFERENCES departmanlar (id) ON DELETE SET NULL,
+  planlanan_tarih TEXT NOT NULL,
+  baslangic_tarihi TEXT,
+  bitis_tarihi TEXT,
+  durum TEXT NOT NULL DEFAULT 'planlandi'
+    CHECK (durum IN ('planlandi', 'devam_ediyor', 'tamamlandi')),
+  olusturan_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  tamamlayan_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  olusturma_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  guncelleme_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS idx_tetkikler_yil ON ic_tetkikler (yil);
+CREATE INDEX IF NOT EXISTS idx_tetkikler_durum ON ic_tetkikler (durum);
+CREATE INDEX IF NOT EXISTS idx_tetkikler_departman ON ic_tetkikler (departman_id);
+CREATE INDEX IF NOT EXISTS idx_tetkikler_tarih ON ic_tetkikler (planlanan_tarih);
+
+CREATE TABLE IF NOT EXISTS ic_tetkik_denetcileri (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tetkik_id INTEGER NOT NULL REFERENCES ic_tetkikler (id) ON DELETE CASCADE,
+  kullanici_id INTEGER NOT NULL REFERENCES kullanicilar (id) ON DELETE CASCADE,
+  gorev TEXT NOT NULL DEFAULT 'denetci'
+    CHECK (gorev IN ('bas_denetci', 'denetci', 'gozlemci')),
+  durum TEXT NOT NULL DEFAULT 'atanmis'
+    CHECK (durum IN ('atanmis', 'kabul_edildi', 'tamamlandi')),
+  atayan_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  atama_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  yanit_tarihi TEXT,
+  tamamlanma_tarihi TEXT,
+  UNIQUE (tetkik_id, kullanici_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tetkik_denetcileri_tetkik ON ic_tetkik_denetcileri (tetkik_id);
+CREATE INDEX IF NOT EXISTS idx_tetkik_denetcileri_kullanici ON ic_tetkik_denetcileri (kullanici_id);
+
+CREATE TABLE IF NOT EXISTS ic_tetkik_maddeleri (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tetkik_id INTEGER NOT NULL REFERENCES ic_tetkikler (id) ON DELETE CASCADE,
+  checklist_madde_id INTEGER REFERENCES ic_tetkik_checklist_maddeleri (id) ON DELETE SET NULL,
+  sira INTEGER NOT NULL DEFAULT 0,
+  baslik TEXT NOT NULL,
+  kriter TEXT NOT NULL,
+  referans TEXT NOT NULL DEFAULT '',
+  agirlik INTEGER NOT NULL DEFAULT 1 CHECK (agirlik BETWEEN 1 AND 10),
+  sonuc TEXT CHECK (sonuc IS NULL OR sonuc IN ('uygun', 'minor', 'major', 'gozlem')),
+  puan REAL CHECK (puan IS NULL OR (puan >= 0 AND puan <= 100)),
+  bulgu_aciklama TEXT NOT NULL DEFAULT '',
+  kanit TEXT NOT NULL DEFAULT '',
+  degerlendiren_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  degerlendirme_tarihi TEXT,
+  UNIQUE (tetkik_id, checklist_madde_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tetkik_maddeleri_tetkik ON ic_tetkik_maddeleri (tetkik_id, sira);
+
+CREATE TABLE IF NOT EXISTS ic_tetkik_bulgulari (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kod TEXT NOT NULL UNIQUE,
+  tetkik_id INTEGER NOT NULL REFERENCES ic_tetkikler (id) ON DELETE CASCADE,
+  madde_id INTEGER REFERENCES ic_tetkik_maddeleri (id) ON DELETE SET NULL,
+  baslik TEXT NOT NULL,
+  tanim TEXT NOT NULL,
+  sonuc TEXT NOT NULL DEFAULT 'gozlem'
+    CHECK (sonuc IN ('minor', 'major', 'gozlem')),
+  departman_id INTEGER REFERENCES departmanlar (id) ON DELETE SET NULL,
+  sorumlu_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  tespit_tarihi TEXT NOT NULL,
+  durum TEXT NOT NULL DEFAULT 'acik'
+    CHECK (durum IN ('acik', 'dof_acildi', 'kapandi')),
+  dof_id INTEGER UNIQUE REFERENCES dof_kayitlari (id) ON DELETE SET NULL,
+  olusturan_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  olusturma_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  guncelleme_tarihi TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS idx_tetkik_bulgulari_tetkik ON ic_tetkik_bulgulari (tetkik_id);
+CREATE INDEX IF NOT EXISTS idx_tetkik_bulgulari_dof ON ic_tetkik_bulgulari (dof_id);
+CREATE INDEX IF NOT EXISTS idx_tetkik_bulgulari_departman ON ic_tetkik_bulgulari (departman_id);
+
+-- Modüller arası ortak, değiştirilemez aktivite izi. Kayıt türü alanı
+-- polymorphic bağlantı taşır; FK uygulanmaz böylece silinen bir kayıt
+-- sonrası da geçmiş aktivite korunur.
+CREATE TABLE IF NOT EXISTS aktivite_loglari (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  modul TEXT NOT NULL,
+  islem TEXT NOT NULL,
+  kayit_tipi TEXT NOT NULL DEFAULT '',
+  kayit_id INTEGER,
+  referans_no TEXT NOT NULL DEFAULT '',
+  kullanici_id INTEGER REFERENCES kullanicilar (id) ON DELETE SET NULL,
+  aciklama TEXT NOT NULL DEFAULT '',
+  eski_deger TEXT NOT NULL DEFAULT '',
+  yeni_deger TEXT NOT NULL DEFAULT '',
+  tarih TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS idx_aktivite_loglari_modul ON aktivite_loglari (modul, kayit_tipi, kayit_id);
+CREATE INDEX IF NOT EXISTS idx_aktivite_loglari_tarih ON aktivite_loglari (tarih);
 `;
 
 function openDatabase(dbYolu) {
@@ -239,8 +373,9 @@ function openDatabase(dbYolu) {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec('PRAGMA busy_timeout = 5000;');
   db.exec(SEMA);
-  db.exec('PRAGMA user_version = 5;');
+  db.exec('PRAGMA user_version = 6;');
   varsayilanVerileriYukle(db);
+  varsayilanTetkikVerileriniYukle(db);
   return db;
 }
 

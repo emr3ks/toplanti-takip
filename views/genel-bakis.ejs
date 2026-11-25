@@ -139,6 +139,30 @@
   </div>
 
   <div class="dikey">
+    <div class="kart tetkik-ozet-kart">
+      <div class="kart-bas">
+        <div>
+          <h2>İç Tetkik Özeti</h2>
+          <p>Cari yılın denetim planı, bulgu ve DÖF bağlantıları.</p>
+        </div>
+        <a class="btn btn-kucuk btn-hayalet" href="/tetkik">Tümü</a>
+      </div>
+      <div class="dof-ozet-grid" aria-label="İç tetkik özeti">
+        <a class="dof-ozet-hucre" href="/tetkik?durum=planlandi">
+          <strong><%= tetkikOzet.planlandi %></strong><span>Planlandı</span>
+        </a>
+        <a class="dof-ozet-hucre" href="/tetkik?durum=devam_ediyor">
+          <strong><%= tetkikOzet.devamEdiyor %></strong><span>Devam ediyor</span>
+        </a>
+        <a class="dof-ozet-hucre" href="/tetkik?durum=tamamlandi">
+          <strong><%= tetkikOzet.tamamlandi %></strong><span>Tamamlandı</span>
+        </a>
+        <a class="dof-ozet-hucre" href="/tetkik">
+          <strong><%= tetkikOzet.bulgu %></strong><span>Bulgu</span>
+        </a>
+      </div>
+    </div>
+
     <div class="kart dof-ozet-kart">
       <div class="kart-bas">
         <div>
