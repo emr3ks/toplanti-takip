@@ -42,6 +42,13 @@
         <dt>İlgili departman</dt><dd><%= kayit.departman_ad || '—' %></dd>
         <dt>Talep eden</dt><dd><%= kayit.talep_eden %></dd>
         <dt>Tespit tarihi</dt><dd><%= tarihTr(kayit.tespit_tarihi) %></dd>
+        <% if (kayit.tetkik_kod) { %>
+          <dt>İç tetkik bağlantısı</dt>
+          <dd>
+            <a href="/tetkik/<%= kayit.tetkik_id %>#tetkik-bulgulari" class="mono"><%= kayit.tetkik_kod %></a>
+            <% if (kayit.tetkik_bulgu_kod) { %> · <span class="mono"><%= kayit.tetkik_bulgu_kod %></span><% } %>
+          </dd>
+        <% } %>
         <dt>İlgili kalite dokümanı</dt>
         <dd>
           <% if (kayit.dokuman_kod) { %>

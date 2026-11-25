@@ -1150,4 +1150,1126 @@ function dofPdfUret({
   });
 }
 
-module.exports = { pdfUret, dofPdfUret, logoVerisiCoz, turkceAscii, renkGecerliMi };
+/**
+ * İç tetkik (denetim) için kurumsal PDF raporu üretir.
+ *
+ * Rapor; şirket antetini, tetkik künyesini, kapsam / amaç / yöntem özetini,
+ * ağırlıklı puanı, sonuç sayılarını, bütün kontrol listesi maddelerini,
+ * bulgu / DÖF bağlantılarını ve imza kutularını içerir. Kontrol listesi ve
+ * bulgu tabloları sayfa sınırında bölünür; yeni sayfalarda tablo başlıkları
+ * yeniden basılır.
+ */
+async function tetkikPdfUret({
+  tetkik,
+  maddeler = [],
+  bulgular = [],
+  sirket,
+  logoYolu = null,
+  logoVerisi = null,
+  bugun = null,
+  denetleyenAd = '',
+  tamamlayanAd = '',
+} = {}) {
+  const kayit = tetkik && typeof tetkik === 'object' ? tetkik : {};
+  const maddeKayitlari = Array.isArray(maddeler) ? maddeler : [];
+  const bulguKayitlari = Array.isArray(bulgular) ? bulgular : [];
+
+  function doluDeger(deger) {
+    return (
+      deger !== null &&
+      deger !== undefined &&
+      !(typeof deger === 'string' && deger.trim() === '')
+    );
+  }
+
+  function ilkHam(nesne, anahtarlar) {
+    if (!nesne || typeof nesne !== 'object') return null;
+    for (const anahtar of anahtarlar) {
+      if (Object.prototype.hasOwnProperty.call(nesne, anahtar) && doluDeger(nesne[anahtar])) {
+        return nesne[anahtar];
+      }
+    }
+    return null;
+  }
+
+  function metinDuzestir(deger) {
+    if (!doluDeger(deger)) return null;
+    if (typeof deger === 'object') {
+      const nesneMetni = ilkHam(deger, [
+        'aciklama',
+        'description',
+        'metin',
+        'not',
+        'ad',
+        'name',
+        'kod',
+        'code',
+        'referans',
+      ]);
+      if (nesneMetni !== null && typeof nesneMetni !== 'object') {
+        const sonuc = String(nesneMetni).trim();
+        return sonuc || null;
+      }
+      return null;
+    }
+    const sonuc = String(deger).trim();
+    return sonuc || null;
+  }
+
+  function ilkMetin(nesne, anahtarlar) {
+    for (const anahtar of anahtarlar) {
+      if (!nesne || typeof nesne !== 'object') continue;
+      const metin = metinDuzestir(nesne[anahtar]);
+      if (metin !== null) return metin;
+    }
+    return null;
+  }
+
+  function sayiCoz(deger) {
+    if (typeof deger === 'number') return Number.isFinite(deger) ? deger : null;
+    if (typeof deger !== 'string') return null;
+    const temiz = deger.trim().replace(',', '.');
+    if (!/^-?\d+(?:\.\d+)?$/.test(temiz)) return null;
+    const sayi = Number(temiz);
+    return Number.isFinite(sayi) ? sayi : null;
+  }
+
+  function ilkSayi(nesne, anahtarlar) {
+    for (const anahtar of anahtarlar) {
+      if (!nesne || typeof nesne !== 'object') continue;
+      const sayi = sayiCoz(nesne[anahtar]);
+      if (sayi !== null) return sayi;
+    }
+    return null;
+  }
+
+  function normalizeEtiket(deger) {
+    return turkceAscii(String(deger ?? ''))
+      .toLocaleLowerCase('tr-TR')
+      .replace(/[^a-z0-9]+/g, '');
+  }
+
+  const SONUC_TANIMLARI = Object.freeze({
+    uygun: { etiket: 'Uygun', puan: 100 },
+    minor: { etiket: 'Minör', puan: 50 },
+    major: { etiket: 'Majör', puan: 0 },
+    gozlem: { etiket: 'Gözlem', puan: 100 },
+  });
+
+  function sonucSinifi(deger) {
+    const ham = String(deger ?? '').trim();
+    if (!ham) return null;
+    if (/^[1-4]$/.test(ham)) {
+      return ['uygun', 'minor', 'major', 'gozlem'][Number(ham) - 1];
+    }
+    const normalize = normalizeEtiket(ham);
+    if (
+      normalize.includes('minor') ||
+      normalize.includes('minur') ||
+      normalize === 'mnr' ||
+      normalize === 'minoruygunsuzluk'
+    ) {
+      return 'minor';
+    }
+    if (
+      normalize.includes('major') ||
+      normalize.includes('majur') ||
+      normalize === 'mjr' ||
+      normalize === 'majoruygunsuzluk'
+    ) {
+      return 'major';
+    }
+    if (
+      normalize.includes('gozlem') ||
+      normalize.includes('observation') ||
+      normalize === 'obs'
+    ) {
+      return 'gozlem';
+    }
+    if (normalize.includes('uygunsuzluk')) return null;
+    if (normalize.includes('uygun') || normalize.includes('conform') || normalize === 'ok') {
+      return 'uygun';
+    }
+    return null;
+  }
+
+  function durumEtiketi(deger) {
+    const metin = metinDuzestir(deger);
+    if (!metin) return '—';
+    const normalize = normalizeEtiket(metin);
+    if (normalize.includes('tamamland') || normalize === 'complete' || normalize === 'completed') {
+      return 'Tamamlandı';
+    }
+    if (normalize.includes('devam') || normalize.includes('devamediyor') || normalize === 'ongoing') {
+      return 'Devam Ediyor';
+    }
+    if (normalize.includes('planland') || normalize === 'planned' || normalize === 'plan') {
+      return 'Planlandı';
+    }
+    return metin;
+  }
+
+  function tarihAl(deger) {
+    if (deger instanceof Date && !Number.isNaN(deger.getTime())) {
+      return tarihMetni(deger.toISOString().slice(0, 10));
+    }
+    return tarihMetni(deger);
+  }
+
+  function puanBicimle(deger) {
+    if (typeof deger !== 'number' || !Number.isFinite(deger)) return '—';
+    return deger.toLocaleString('tr-TR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  const departmanNesnesi = kayit.departman && typeof kayit.departman === 'object' ? kayit.departman : {};
+  const sirketAdi =
+    ilkMetin(sirket, ['ad', 'name', 'sirket_adi', 'company_name']) || '—';
+  const tetkikBasligi = ilkMetin(kayit, ['baslik', 'title']) || '—';
+  const tetkikKodu =
+    ilkMetin(kayit, [
+      'tetkik_kodu',
+      'denetim_kodu',
+      'audit_code',
+      'kod',
+      'code',
+      'referans',
+      'no',
+    ]) || '—';
+  const tetkikYili =
+    ilkMetin(kayit, ['yil', 'denetim_yili', 'audit_year', 'year']) || '—';
+  const tetkikDurumu = durumEtiketi(
+    ilkHam(kayit, ['durum', 'status', 'denetim_durumu', 'audit_status'])
+  );
+  const departmanAdi =
+    ilkMetin(kayit, [
+      'departman_ad',
+      'departman_adi',
+      'departman',
+      'birim_ad',
+      'birim_adi',
+      'department_name',
+    ]) ||
+    ilkMetin(departmanNesnesi, ['ad', 'name', 'departman_ad']) ||
+    '—';
+
+  const planTarihi = tarihAl(
+    ilkHam(kayit, ['planlanan_tarih', 'plan_tarihi', 'planlama_tarihi', 'planned_date', 'tarih'])
+  );
+  const baslangicTarihi = tarihAl(
+    ilkHam(kayit, ['baslangic_tarihi', 'baslangiç_tarihi', 'start_date', 'denetim_tarihi'])
+  );
+  const bitisTarihi = tarihAl(
+    ilkHam(kayit, ['bitis_tarihi', 'bitiş_tarihi', 'end_date', 'tamamlama_tarihi'])
+  );
+  const raporTarihi = tarihAl(
+    bugun || ilkHam(kayit, ['rapor_tarihi', 'raporlama_tarihi', 'tamamlama_tarihi'])
+  );
+
+  const denetleyen =
+    denetleyenAd ||
+    ilkMetin(kayit, [
+      'denetleyen_ad',
+      'denetleyen_adi',
+      'denetleyen',
+      'bas_denetci_ad',
+      'lead_auditor',
+    ]) || '—';
+  const tamamlayan =
+    tamamlayanAd ||
+    ilkMetin(kayit, [
+      'tamamlayan_ad',
+      'tamamlayan_adi',
+      'tamamlayan',
+      'rapor_tamamlayan',
+      'completed_by',
+    ]) || '—';
+
+  const duzenliMaddeler = maddeKayitlari.map((madde, indeks) => {
+    const nesne = madde && typeof madde === 'object' ? madde : { madde };
+    const sonucHam = ilkHam(nesne, ['sonuc', 'result', 'degerlendirme', 'kontrol_sonucu']);
+    const sinif = sonucSinifi(sonucHam);
+    const acikPuan = ilkSayi(nesne, [
+      'puan',
+      'skor',
+      'score',
+      'puan_degeri',
+      'madd_puan',
+    ]);
+    const hamAgirlik = ilkSayi(nesne, [
+      'agirlik',
+      'ağırlık',
+      'weight',
+      'agirlik_degeri',
+      'agirlik_puan',
+    ]);
+    const agirlik = hamAgirlik !== null && hamAgirlik > 0 ? hamAgirlik : 1;
+    const puan =
+      acikPuan !== null ? acikPuan : sinif ? SONUC_TANIMLARI[sinif].puan : null;
+    return {
+      nesne,
+      sira:
+        ilkMetin(nesne, ['sira', 'sıra', 'madde_no', 'no', 'numara']) || String(indeks + 1),
+      baslik: ilkMetin(nesne, ['baslik', 'title']),
+      kriter: ilkMetin(nesne, ['kriter', 'criterion']),
+      gereklilik: ilkMetin(nesne, [
+        'gereklilik',
+        'requirement',
+        'madde',
+        'soru',
+        'baslik',
+        'aciklama',
+      ]),
+      referans: ilkMetin(nesne, [
+        'referans',
+        'reference',
+        'kaynak',
+        'standard',
+        'denetim_gerekliligi',
+      ]),
+      sonucMetni: sinif
+        ? SONUC_TANIMLARI[sinif].etiket
+        : metinDuzestir(sonucHam) || '—',
+      sinif,
+      puan,
+      agirlik,
+    };
+  });
+
+  const duzenliBulgular = bulguKayitlari.map((bulgu, indeks) => {
+    const nesne = bulgu && typeof bulgu === 'object' ? bulgu : { bulgu };
+    const dogrudanSinif = sonucSinifi(
+      ilkHam(nesne, ['siniflandirma', 'sinif', 'classification', 'tur', 'sonuc', 'result'])
+    );
+    const sinifMetni = dogrudanSinif
+      ? SONUC_TANIMLARI[dogrudanSinif].etiket
+      : ilkMetin(nesne, ['siniflandirma', 'sinif', 'classification', 'tur', 'sonuc', 'result']) || '—';
+    const dofNesnesi = nesne.dof && typeof nesne.dof === 'object' ? nesne.dof : {};
+    let dofReferansi = ilkMetin(nesne, [
+      'dof_referansi',
+      'dof_referans',
+      'dof_kodu',
+      'dof_kod',
+      'dof_no',
+      'dof_ref',
+    ]);
+    if (!dofReferansi) {
+      dofReferansi = ilkMetin(dofNesnesi, ['referans', 'kod', 'code', 'no']);
+    }
+    if (!dofReferansi) {
+      const dofId = ilkHam(nesne, ['dof_id', 'dofId']);
+      if (doluDeger(dofId)) dofReferansi = `DÖF #${metinDuzestir(dofId) || dofId}`;
+    }
+    const sorumlu = ilkMetin(nesne, [
+      'sorumlu_ad',
+      'sorumlu_adi',
+      'sorumlu',
+      'responsible',
+      'responsible_name',
+    ]);
+    const bulguDepartmani =
+      ilkMetin(nesne, ['departman_ad', 'departman_adi', 'departman', 'department_name']) ||
+      ilkMetin(departmanNesnesi, ['ad', 'name']);
+    const bulguBasligi = ilkMetin(nesne, ['baslik', 'title']);
+    const bulguTanimi = ilkMetin(nesne, [
+      'aciklama',
+      'description',
+      'bulgu_aciklama',
+      'tanim',
+      'bulgu',
+      'detail',
+    ]);
+    const bulguAciklamasi = [bulguBasligi, bulguTanimi]
+      .filter((deger) => deger && deger !== '—')
+      .filter((deger, indeks, dizi) => dizi.indexOf(deger) === indeks)
+      .join('\n');
+    return {
+      nesne,
+      referans:
+        ilkMetin(nesne, ['bulgu_ref', 'bulgu_referansi', 'bulgu_no', 'referans', 'kod', 'no']) ||
+        '—',
+      sinifMetni,
+      aciklama: bulguAciklamasi || '—',
+      sorumlu: sorumlu || '—',
+      departman: bulguDepartmani || '—',
+      dofReferansi: dofReferansi || 'DÖF oluşturulmadı',
+      sira: ilkMetin(nesne, ['sira', 'sıra', 'no', 'numara']) || String(indeks + 1),
+    };
+  });
+
+  const bulguHaritasi = new Map();
+  for (const bulgu of duzenliBulgular) {
+    for (const anahtar of ['bulgu_ref', 'bulgu_referansi', 'bulgu_no', 'referans', 'kod', 'id']) {
+      const referans = metinDuzestir(bulgu.nesne[anahtar]);
+      if (referans) bulguHaritasi.set(normalizeEtiket(referans), bulgu);
+    }
+  }
+
+  const sonucSayaclari = { uygun: 0, minor: 0, major: 0, gozlem: 0 };
+  for (const madde of duzenliMaddeler) {
+    if (madde.sinif && Object.prototype.hasOwnProperty.call(sonucSayaclari, madde.sinif)) {
+      sonucSayaclari[madde.sinif] += 1;
+    }
+  }
+
+  const puanlanabilirMaddeler = duzenliMaddeler.filter(
+    (madde) => madde.puan !== null && madde.agirlik > 0
+  );
+  const kayitPuani = ilkSayi(kayit, [
+    'genel_puan',
+    'overall_score',
+    'toplam_puan',
+    'weighted_score',
+    'puan',
+  ]);
+  const yerelGenelPuan = puanlanabilirMaddeler.length
+    ? puanlanabilirMaddeler.reduce(
+        (toplam, madde) => toplam + madde.puan * madde.agirlik,
+        0
+      ) / puanlanabilirMaddeler.reduce((toplam, madde) => toplam + madde.agirlik, 0)
+    : null;
+  const genelPuan = kayitPuani !== null ? kayitPuani : yerelGenelPuan;
+
+  return new Promise((resolve, reject) => {
+    const antetRenk = '#1e3a8a';
+    const antetAcikRenk = '#e8eef9';
+    let doc;
+    try {
+      doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: KENAR.ust, bottom: KENAR.alt, left: KENAR.sol, right: KENAR.sag },
+        bufferPages: true,
+        info: {
+          Title: `${tetkikKodu} İç Tetkik (Denetim) Raporu`.trim(),
+          Author: sirketAdi,
+          Subject: 'İç Tetkik (Denetim) Raporu',
+        },
+      });
+    } catch (hata) {
+      reject(hata);
+      return;
+    }
+
+    if (NORMAL_YOL) doc.registerFont('govde', NORMAL_YOL);
+    if (KALIN_YOL) doc.registerFont('kalin', KALIN_YOL);
+    const govde = NORMAL_YOL ? 'govde' : 'Helvetica';
+    const kalin = KALIN_YOL ? 'kalin' : 'Helvetica-Bold';
+
+    const parcalar = [];
+    doc.on('data', (parca) => parcalar.push(parca));
+    doc.on('end', () => resolve(Buffer.concat(parcalar)));
+    doc.on('error', reject);
+
+    const logoKaynagi =
+      logoVerisi !== null && logoVerisi !== undefined && logoVerisi !== ''
+        ? logoVerisi
+        : logoYolu;
+    const logo = logoKaynagi ? logoVerisiCoz(logoKaynagi) : null;
+    const icerikAltSinir = () => A4.yukseklik - KENAR.alt;
+
+    function yeniSayfa() {
+      doc.addPage();
+      doc.y = KENAR.ust;
+      doc.x = KENAR.sol;
+    }
+
+    function yerVarMi(gerekli) {
+      return doc.y + gerekli <= icerikAltSinir();
+    }
+
+    function boslukAyir(gerekli) {
+      if (!yerVarMi(gerekli)) yeniSayfa();
+    }
+
+    function antetCiz() {
+      const x = KENAR.sol;
+      const ust = 34;
+      doc.rect(x, ust, ICERIK_GENISLIK, 5).fillColor(antetRenk).fill();
+
+      const logoKutuY = ust + 14;
+      if (logo) {
+        const icX = x + LOGO_KUTU.icBosluk;
+        const icY = logoKutuY + LOGO_KUTU.icBosluk;
+        const icGenislik = LOGO_KUTU.genislik - LOGO_KUTU.icBosluk * 2;
+        const icYukseklik = LOGO_KUTU.yukseklik - LOGO_KUTU.icBosluk * 2;
+        doc.save();
+        doc.rect(x, logoKutuY, LOGO_KUTU.genislik, LOGO_KUTU.yukseklik).fillColor('#ffffff').fill();
+        try {
+          doc.image(logo.veri, icX, icY, {
+            fit: [icGenislik, icYukseklik],
+            align: 'center',
+            valign: 'center',
+          });
+        } catch (hata) {
+          logoUyar(`İç tetkik raporu görseli çizilemedi (${hata.message}).`);
+          doc
+            .font(govde)
+            .fontSize(9)
+            .fillColor('#94a3b8')
+            .text(yazi('—'), icX, logoKutuY + LOGO_KUTU.yukseklik / 2 - 5, {
+              width: icGenislik,
+              align: 'center',
+            });
+        }
+        doc.restore();
+        stilCiz(doc, x, logoKutuY, LOGO_KUTU.genislik, LOGO_KUTU.yukseklik, 'duz');
+      }
+
+      const sirketX = logo ? x + LOGO_KUTU.genislik + 12 : x;
+      const sirketGenislik = logo
+        ? ICERIK_GENISLIK - LOGO_KUTU.genislik - 12
+        : ICERIK_GENISLIK;
+      doc.fillColor('#0f172a').font(kalin).fontSize(13.5);
+      const sirketMetni = yazi(sirketAdi);
+      doc.text(
+        metniSigdir(doc, sirketMetni, sirketGenislik),
+        sirketX,
+        ust + 14,
+        { width: sirketGenislik, align: 'right' }
+      );
+      doc
+        .font(govde)
+        .fontSize(8)
+        .fillColor('#64748b')
+        .text(yazi('Kalite Yönetim Sistemi | İç Tetkik / Denetim'), sirketX, ust + 33, {
+          width: sirketGenislik,
+          align: 'right',
+        });
+
+      const tabloY = 104;
+      const hucreGenislik = ICERIK_GENISLIK / 4;
+      const hucreYukseklik = 27;
+      const bilgiler = [
+        ['TETKİK KODU', tetkikKodu],
+        ['YIL', tetkikYili],
+        ['DURUM', tetkikDurumu],
+        ['DEPARTMAN', departmanAdi],
+        ['PLANLANAN TARİH', planTarihi],
+        ['BAŞLANGIÇ TARİHİ', baslangicTarihi],
+        ['BİTİŞ TARİHİ', bitisTarihi],
+        ['RAPOR TARİHİ', raporTarihi],
+      ];
+      bilgiler.forEach(([etiket, deger], indeks) => {
+        const satir = Math.floor(indeks / 4);
+        const sutun = indeks % 4;
+        const hucreX = x + sutun * hucreGenislik;
+        const hucreY = tabloY + satir * hucreYukseklik;
+        doc
+          .rect(hucreX, hucreY, hucreGenislik, hucreYukseklik)
+          .fillColor(satir === 0 ? antetRenk : '#274c9b')
+          .fill();
+        doc
+          .fillColor('#ffffff')
+          .font(govde)
+          .fontSize(6.2)
+          .text(yazi(etiket), hucreX + 6, hucreY + 4, {
+            width: hucreGenislik - 12,
+            lineBreak: false,
+          });
+        doc.font(kalin).fontSize(8.2);
+        doc.text(
+          yazi(metniSigdir(doc, String(deger || '—'), hucreGenislik - 12)),
+          hucreX + 6,
+          hucreY + 14,
+          { width: hucreGenislik - 12, lineBreak: false }
+        );
+        doc
+          .strokeColor(antetRenk)
+          .lineWidth(0.6)
+          .rect(hucreX, hucreY, hucreGenislik, hucreYukseklik)
+          .stroke();
+      });
+    }
+
+    antetCiz();
+    doc.on('pageAdded', () => {
+      antetCiz();
+      doc.y = KENAR.ust;
+      doc.x = KENAR.sol;
+    });
+
+    function bolumBasligi(baslik) {
+      boslukAyir(36);
+      const y = doc.y;
+      doc.rect(KENAR.sol, y + 1, 3.5, 14).fillColor(antetRenk).fill();
+      doc
+        .fillColor('#0f172a')
+        .font(kalin)
+        .fontSize(11)
+        .text(yazi(baslik), KENAR.sol + 10, y, { width: ICERIK_GENISLIK - 10 });
+      doc.y = y + 19;
+    }
+
+    function ozetSatiri(etiket, deger) {
+      const metin = metinDuzestir(deger) || '—';
+      doc.font(govde).fontSize(9.2);
+      const metinYukseklik = doc.heightOfString(yazi(metin), {
+        width: ICERIK_GENISLIK - 96,
+        lineGap: 1.5,
+      });
+      const satirYukseklik = Math.max(19, metinYukseklik + 5);
+      boslukAyir(satirYukseklik + 4);
+      const y = doc.y;
+      doc
+        .rect(KENAR.sol, y, 88, satirYukseklik)
+        .fillColor('#f1f5f9')
+        .fill();
+      doc
+        .strokeColor('#cbd5e1')
+        .lineWidth(0.5)
+        .rect(KENAR.sol, y, 88, satirYukseklik)
+        .stroke();
+      doc
+        .font(kalin)
+        .fontSize(8.2)
+        .fillColor('#334155')
+        .text(yazi(etiket), KENAR.sol + 7, y + 6, {
+          width: 74,
+          lineBreak: false,
+        });
+      doc
+        .font(govde)
+        .fontSize(9.2)
+        .fillColor('#1f2937')
+        .text(yazi(metin), KENAR.sol + 96, y + 5, {
+          width: ICERIK_GENISLIK - 96,
+          lineGap: 1.5,
+        });
+      doc.y = y + satirYukseklik + 4;
+    }
+
+    function sonucOzetiCiz() {
+      bolumBasligi('SONUÇ ÖZETİ');
+      const kartY = doc.y;
+      const kartYukseklik = 67;
+      const puanGenislik = 150;
+      const bosluk = 8;
+      const sayacGenislik = (ICERIK_GENISLIK - puanGenislik - bosluk) / 4;
+
+      doc
+        .rect(KENAR.sol, kartY, puanGenislik, kartYukseklik)
+        .fillColor(antetAcikRenk)
+        .fill();
+      doc
+        .rect(KENAR.sol, kartY, 4, kartYukseklik)
+        .fillColor(antetRenk)
+        .fill();
+      doc
+        .font(govde)
+        .fontSize(7.2)
+        .fillColor('#475569')
+        .text(yazi('Ağırlıklı Genel Puan'), KENAR.sol + 12, kartY + 10, {
+          width: puanGenislik - 20,
+          lineBreak: false,
+        });
+      const genelPuanMetni =
+        genelPuan === null || genelPuan === undefined
+          ? '—'
+          : `${puanBicimle(genelPuan)} / 100`;
+      doc
+        .font(kalin)
+        .fontSize(19)
+        .fillColor(antetRenk)
+        .text(yazi(genelPuanMetni), KENAR.sol + 12, kartY + 27, {
+          width: puanGenislik - 20,
+          lineBreak: false,
+        });
+
+      Object.entries(SONUC_TANIMLARI).forEach(([anahtar, tanim], indeks) => {
+        const x = KENAR.sol + puanGenislik + bosluk + indeks * sayacGenislik;
+        doc.rect(x, kartY, sayacGenislik, kartYukseklik).fillColor('#f8fafc').fill();
+        doc
+          .strokeColor('#cbd5e1')
+          .lineWidth(0.5)
+          .rect(x, kartY, sayacGenislik, kartYukseklik)
+          .stroke();
+        doc
+          .font(govde)
+          .fontSize(7.2)
+          .fillColor('#475569')
+          .text(yazi(tanim.etiket), x + 5, kartY + 10, {
+            width: sayacGenislik - 10,
+            align: 'center',
+            lineBreak: false,
+          });
+        doc
+          .font(kalin)
+          .fontSize(18)
+          .fillColor(antetRenk)
+          .text(yazi(String(sonucSayaclari[anahtar])), x + 5, kartY + 27, {
+            width: sayacGenislik - 10,
+            align: 'center',
+            lineBreak: false,
+          });
+      });
+
+      doc.y = kartY + kartYukseklik + 6;
+      doc
+        .font(govde)
+        .fontSize(7.5)
+        .fillColor('#64748b')
+        .text(
+          yazi('Genel puan, puanlanabilen kontrol listesi maddelerinin ağırlıklarına göre hesaplanmıştır.'),
+          KENAR.sol,
+          doc.y,
+          { width: ICERIK_GENISLIK }
+        );
+      doc.moveDown(0.55);
+    }
+
+    function kontrolListesiCiz() {
+      bolumBasligi('KONTROL LİSTESİ SONUÇLARI');
+      const kolonlar = [
+        { genislik: 25 },
+        { genislik: 180 },
+        { genislik: 63 },
+        { genislik: 46 },
+        { genislik: 185.28 },
+      ];
+      const basliklar = ['No', 'Gereklilik / Referans', 'Sonuç', 'Puan', 'Bulgu / Kanıt'];
+
+      function baslikSatiri(y) {
+        let x = KENAR.sol;
+        doc.rect(x, y, ICERIK_GENISLIK, 21).fillColor(antetRenk).fill();
+        kolonlar.forEach((kolon, indeks) => {
+          doc
+            .fillColor('#ffffff')
+            .font(kalin)
+            .fontSize(6.8)
+            .text(yazi(basliklar[indeks]), x + 4, y + 7, {
+              width: kolon.genislik - 8,
+              lineBreak: false,
+            });
+          x += kolon.genislik;
+        });
+        doc
+          .strokeColor(antetRenk)
+          .lineWidth(0.6)
+          .rect(KENAR.sol, y, ICERIK_GENISLIK, 21)
+          .stroke();
+      }
+
+      if (!duzenliMaddeler.length) {
+        doc
+          .font(govde)
+          .fontSize(9.2)
+          .fillColor('#94a3b8')
+          .text(yazi('Bu tetkik için kontrol listesi maddesi tanımlanmamış.'), KENAR.sol, doc.y, {
+            width: ICERIK_GENISLIK,
+          });
+        doc.moveDown(0.6);
+        return;
+      }
+
+      let y = doc.y;
+      baslikSatiri(y);
+      y += 21;
+
+      duzenliMaddeler.forEach((madde) => {
+        let bulguMetni = ilkMetin(madde.nesne, [
+          'bulgu_aciklama',
+          'bulgu',
+          'finding',
+          'finding_description',
+          'aciklama',
+          'tespit',
+          'not',
+        ]);
+        const bulguBaglanti = ilkMetin(madde.nesne, [
+          'bulgu_ref',
+          'bulgu_referansi',
+          'bulgu_no',
+          'bulgu_kodu',
+        ]);
+        if (!bulguMetni && bulguBaglanti) {
+          bulguMetni = bulguHaritasi.get(normalizeEtiket(bulguBaglanti))?.aciklama || null;
+        }
+        const kanitMetni = ilkMetin(madde.nesne, [
+          'kanit',
+          'kanit_aciklama',
+          'evidence',
+          'evidence_description',
+          'belge',
+        ]);
+        const bulguKanitParcalari = [];
+        if (bulguMetni) bulguKanitParcalari.push(bulguMetni);
+        if (kanitMetni) bulguKanitParcalari.push(`Kanıt: ${kanitMetni}`);
+        const bulguKanitMetni = bulguKanitParcalari.join('\n') || '—';
+
+        let gereklilikParcalari = [];
+        if (madde.baslik && madde.baslik !== madde.kriter) gereklilikParcalari.push(madde.baslik);
+        if (madde.kriter) gereklilikParcalari.push(madde.kriter);
+        if (!gereklilikParcalari.length && madde.gereklilik) {
+          gereklilikParcalari.push(madde.gereklilik);
+        }
+        let gereklilikMetni = gereklilikParcalari.join('\n') || '—';
+        if (madde.referans && !gereklilikParcalari.includes(madde.referans)) {
+          gereklilikMetni += `\nReferans: ${madde.referans}`;
+        }
+
+        const degerler = [
+          madde.sira,
+          gereklilikMetni,
+          madde.sonucMetni,
+          puanBicimle(madde.puan),
+          bulguKanitMetni,
+        ];
+        doc.font(govde).fontSize(7.2);
+        const icYukseklikler = degerler.map((deger, indeks) =>
+          doc.heightOfString(yazi(deger), {
+            width: kolonlar[indeks].genislik - 8,
+            lineGap: 1.2,
+          })
+        );
+        const satirYukseklik = Math.max(19, Math.ceil(Math.max(...icYukseklikler)) + 8);
+
+        if (y + satirYukseklik > icerikAltSinir() - 4) {
+          yeniSayfa();
+          y = doc.y;
+          baslikSatiri(y);
+          y += 21;
+        }
+
+        let x = KENAR.sol;
+        kolonlar.forEach((kolon, indeks) => {
+          const sonucRengi =
+            indeks === 2
+              ? madde.sinif === 'uygun'
+                ? '#ecfdf5'
+                : madde.sinif === 'minor'
+                  ? '#fffbeb'
+                  : madde.sinif === 'major'
+                    ? '#fef2f2'
+                    : madde.sinif === 'gozlem'
+                      ? '#eff6ff'
+                      : '#f8fafc'
+              : indeks % 2 === 0
+                ? '#ffffff'
+                : '#f8fafc';
+          doc.rect(x, y, kolon.genislik, satirYukseklik).fillColor(sonucRengi).fill();
+          doc
+            .strokeColor('#cbd5e1')
+            .lineWidth(0.5)
+            .rect(x, y, kolon.genislik, satirYukseklik)
+            .stroke();
+          if (indeks === 0 || indeks === 2 || indeks === 3) {
+            doc
+              .font(kalin)
+              .fontSize(7.2)
+              .fillColor('#1f2937')
+              .text(
+                yazi(metniSigdir(doc, degerler[indeks], kolon.genislik - 8)),
+                x + 4,
+                y + 5,
+                { width: kolon.genislik - 8, lineBreak: false }
+              );
+          } else {
+            doc
+              .font(govde)
+              .fontSize(7.2)
+              .fillColor('#1f2937')
+              .text(yazi(degerler[indeks]), x + 4, y + 4, {
+                width: kolon.genislik - 8,
+                lineGap: 1.2,
+              });
+          }
+          x += kolon.genislik;
+        });
+        y += satirYukseklik;
+      });
+
+      doc.y = y + 8;
+    }
+
+    function bulguTablosuCiz() {
+      bolumBasligi('BULGULAR VE DÖF BAĞLANTILARI');
+      const kolonlar = [
+        { genislik: 60 },
+        { genislik: 67 },
+        { genislik: 156 },
+        { genislik: 104 },
+        { genislik: 112.28 },
+      ];
+      const basliklar = [
+        'Bulgu Ref',
+        'Sınıflandırma',
+        'Açıklama',
+        'Sorumlu / Departman',
+        'DÖF Referansı',
+      ];
+
+      function baslikSatiri(y) {
+        let x = KENAR.sol;
+        doc.rect(x, y, ICERIK_GENISLIK, 21).fillColor(antetRenk).fill();
+        kolonlar.forEach((kolon, indeks) => {
+          doc
+            .fillColor('#ffffff')
+            .font(kalin)
+            .fontSize(6.7)
+            .text(yazi(basliklar[indeks]), x + 4, y + 7, {
+              width: kolon.genislik - 8,
+              lineBreak: false,
+            });
+          x += kolon.genislik;
+        });
+        doc
+          .strokeColor(antetRenk)
+          .lineWidth(0.6)
+          .rect(KENAR.sol, y, ICERIK_GENISLIK, 21)
+          .stroke();
+      }
+
+      let y = doc.y;
+      baslikSatiri(y);
+      y += 21;
+
+      if (!duzenliBulgular.length) {
+        const satirYukseklik = 24;
+        doc
+          .rect(KENAR.sol, y, ICERIK_GENISLIK, satirYukseklik)
+          .fillColor('#f8fafc')
+          .fill();
+        doc
+          .strokeColor('#cbd5e1')
+          .lineWidth(0.5)
+          .rect(KENAR.sol, y, ICERIK_GENISLIK, satirYukseklik)
+          .stroke();
+        doc
+          .font(govde)
+          .fontSize(8.5)
+          .fillColor('#94a3b8')
+          .text(yazi('Bu tetkik için bulgu kaydı bulunmuyor.'), KENAR.sol + 6, y + 8, {
+            width: ICERIK_GENISLIK - 12,
+            lineBreak: false,
+          });
+        doc.y = y + satirYukseklik + 8;
+        return;
+      }
+
+      duzenliBulgular.forEach((bulgu) => {
+        const sorumluDepartman = [bulgu.sorumlu, bulgu.departman]
+          .filter((deger) => deger && deger !== '—')
+          .join('\n');
+        const degerler = [
+          bulgu.referans,
+          bulgu.sinifMetni,
+          bulgu.aciklama,
+          sorumluDepartman || '—',
+          bulgu.dofReferansi,
+        ];
+        doc.font(govde).fontSize(7.2);
+        const icYukseklikler = degerler.map((deger, indeks) =>
+          doc.heightOfString(yazi(deger), {
+            width: kolonlar[indeks].genislik - 8,
+            lineGap: 1.2,
+          })
+        );
+        const satirYukseklik = Math.max(21, Math.ceil(Math.max(...icYukseklikler)) + 8);
+
+        if (y + satirYukseklik > icerikAltSinir() - 4) {
+          yeniSayfa();
+          y = doc.y;
+          baslikSatiri(y);
+          y += 21;
+        }
+
+        let x = KENAR.sol;
+        kolonlar.forEach((kolon, indeks) => {
+          doc
+            .rect(x, y, kolon.genislik, satirYukseklik)
+            .fillColor(indeks % 2 === 0 ? '#ffffff' : '#f8fafc')
+            .fill();
+          doc
+            .strokeColor('#cbd5e1')
+            .lineWidth(0.5)
+            .rect(x, y, kolon.genislik, satirYukseklik)
+            .stroke();
+          doc
+            .font(govde)
+            .fontSize(7.2)
+            .fillColor('#1f2937')
+            .text(yazi(degerler[indeks]), x + 4, y + 4, {
+              width: kolon.genislik - 8,
+              lineGap: 1.2,
+            });
+          x += kolon.genislik;
+        });
+        y += satirYukseklik;
+      });
+
+      doc.y = y + 8;
+    }
+
+    function imzaKutulariCiz() {
+      boslukAyir(64);
+      const kutuGenislik = (ICERIK_GENISLIK - 14) / 2;
+      const y = doc.y;
+      const kutular = [
+        {
+          etiket: 'BAŞ DENETÇİ / DENETLEYEN',
+          ad: denetleyen,
+          tarih: `Tarih: ${tarihAl(bugun || bitisTarihi)}`,
+        },
+        {
+          etiket: 'RAPORU TAMAMLAYAN',
+          ad: tamamlayan,
+          tarih: `Tarih: ${tarihAl(bugun || bitisTarihi)}`,
+        },
+      ];
+      kutular.forEach((kutu, indeks) => {
+        const x = KENAR.sol + indeks * (kutuGenislik + 14);
+        stilCiz(doc, x, y, kutuGenislik, 48, 'duz');
+        doc
+          .font(kalin)
+          .fontSize(7)
+          .fillColor('#334155')
+          .text(yazi(kutu.etiket), x + 8, y + 7, { width: kutuGenislik - 16 });
+        doc
+          .font(govde)
+          .fontSize(9)
+          .fillColor('#0f172a')
+          .text(
+            yazi(metniSigdir(doc, kutu.ad, kutuGenislik - 16)),
+            x + 8,
+            y + 20,
+            { width: kutuGenislik - 16, lineBreak: false }
+          );
+        doc
+          .font(govde)
+          .fontSize(7.5)
+          .fillColor('#64748b')
+          .text(yazi(kutu.tarih), x + 8, y + 33, {
+            width: kutuGenislik - 16,
+            lineBreak: false,
+          });
+      });
+      doc.y = y + 58;
+    }
+
+    try {
+      doc
+        .fillColor('#0f172a')
+        .font(kalin)
+        .fontSize(16)
+        .text(yazi('İÇ TETKİK (DENETİM) RAPORU'), KENAR.sol, KENAR.ust, {
+          width: ICERIK_GENISLIK,
+          align: 'center',
+          lineBreak: false,
+        });
+      doc.y = KENAR.ust + 24;
+      doc
+        .font(govde)
+        .fontSize(9)
+        .fillColor('#334155')
+        .text(
+          yazi(metniSigdir(doc, tetkikBasligi, ICERIK_GENISLIK)),
+          KENAR.sol,
+          doc.y,
+          { width: ICERIK_GENISLIK, align: 'center', lineBreak: false }
+        );
+      doc.moveDown(0.25);
+      doc
+        .font(govde)
+        .fontSize(8.5)
+        .fillColor('#475569')
+        .text(yazi(`${tetkikKodu} · ${tetkikYili} · ${tetkikDurumu}`), KENAR.sol, doc.y, {
+          width: ICERIK_GENISLIK,
+          align: 'center',
+          lineBreak: false,
+        });
+      doc.moveDown(0.55);
+      doc
+        .strokeColor('#cbd5e1')
+        .lineWidth(0.8)
+        .moveTo(KENAR.sol, doc.y)
+        .lineTo(KENAR.sol + ICERIK_GENISLIK, doc.y)
+        .stroke();
+      doc.moveDown(0.65);
+
+      bolumBasligi('TETKİK ÖZETİ');
+      ozetSatiri(
+        'Kapsam',
+        ilkMetin(kayit, [
+          'kapsam',
+          'tetkik_kapsami',
+          'denetim_kapsami',
+          'scope',
+          'kapsam_aciklamasi',
+        ])
+      );
+      ozetSatiri(
+        'Amaç',
+        ilkMetin(kayit, [
+          'amac',
+          'tetkik_amaci',
+          'denetim_amaci',
+          'objective',
+          'amac_aciklamasi',
+        ])
+      );
+      ozetSatiri(
+        'Yöntem',
+        ilkMetin(kayit, [
+          'yontem',
+          'tetkik_yontemi',
+          'denetim_yontemi',
+          'metod',
+          'method',
+          'inceleme_metodu',
+        ])
+      );
+
+      sonucOzetiCiz();
+      kontrolListesiCiz();
+      bulguTablosuCiz();
+      imzaKutulariCiz();
+
+      const aralik = doc.bufferedPageRange();
+      const toplam = aralik.count;
+      for (let i = 0; i < toplam; i += 1) {
+        doc.switchToPage(i);
+        const sayfa = doc.page;
+        const eskiAltKenar = sayfa.margins.bottom;
+        sayfa.margins.bottom = 0;
+        doc
+          .font(govde)
+          .fontSize(8)
+          .fillColor('#64748b')
+          .text(yazi(`Sayfa ${i + 1}/${toplam}`), KENAR.sol, sayfa.height - 40, {
+            width: ICERIK_GENISLIK,
+            align: 'center',
+          });
+        doc
+          .font(govde)
+          .fontSize(6.8)
+          .fillColor('#94a3b8')
+          .text(yazi(`${sirketAdi} · ${tetkikKodu} · ${tetkikYili}`), KENAR.sol, sayfa.height - 27, {
+            width: ICERIK_GENISLIK,
+            align: 'center',
+          });
+        sayfa.margins.bottom = eskiAltKenar;
+      }
+    } catch (hata) {
+      reject(hata);
+      try {
+        doc.end();
+      } catch {
+        /* Belge zaten kapanmış olabilir. */
+      }
+      return;
+    }
+
+    doc.end();
+  });
+}
+
+module.exports = {
+  pdfUret,
+  dofPdfUret,
+  tetkikPdfUret,
+  logoVerisiCoz,
+  turkceAscii,
+  renkGecerliMi,
+};

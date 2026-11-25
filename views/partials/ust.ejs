@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/egitim.css">
   <link rel="stylesheet" href="/raporlar.css">
   <link rel="stylesheet" href="/dof.css">
+  <link rel="stylesheet" href="/tetkik.css">
 </head>
 <body>
 <div class="uygulama">
@@ -21,7 +22,7 @@
       <% } %>
       <span class="marka-metin">
         <strong><%= sirket ? sirket.ad : 'Kalite Yönetim Sistemi' %></strong>
-        <small>Quality Management System · Faz 4</small>
+        <small>Quality Management System · Faz 5</small>
       </span>
     </a>
 
@@ -83,6 +84,10 @@
         <a class="menu-link <%= aktifSayfa === 'dof' ? 'aktif' : '' %>" href="/dof" <%= aktifSayfa === 'dof' ? 'aria-current="page"' : '' %>>
           <span class="menu-ikon"><%- include('ikon', { ad: 'dof' }) %></span>
           <span>DÖF Yönetimi</span>
+        </a>
+        <a class="menu-link <%= ['tetkik', 'tetkik-yeni', 'tetkik-detay', 'tetkik-takvim', 'tetkik-checklistler'].includes(aktifSayfa) ? 'aktif' : '' %>" href="/tetkik" <%= aktifSayfa === 'tetkik' ? 'aria-current="page"' : '' %>>
+          <span class="menu-ikon"><%- include('ikon', { ad: 'tetkik' }) %></span>
+          <span>İç Tetkik Yönetimi</span>
         </a>
       </div>
 

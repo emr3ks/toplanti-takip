@@ -12,11 +12,14 @@ const { bugunTz, gunEkle, tarihTr } = require('../src/dates');
 const { ayarlariKaydet, etkinAyarlar, sirketAyarlariKaydet } = require('../src/settings');
 const { kullaniciOlustur, VARSAYILAN_ADMIN } = require('../src/auth');
 const qdms = require('../src/qdms');
+const tetkik = require('../src/tetkik');
 
 const config = loadConfig();
 const db = openDatabase(config.dbPath);
 const sifirla = process.argv.includes('--sifirla');
-const mevcut = db.prepare('SELECT COUNT(*) AS sayi FROM dokumanlar').get().sayi;
+const mevcut =
+  db.prepare('SELECT COUNT(*) AS sayi FROM dokumanlar').get().sayi +
+  db.prepare('SELECT COUNT(*) AS sayi FROM ic_tetkikler').get().sayi;
 
 if (mevcut > 0 && !sifirla) {
   console.log('');
@@ -29,6 +32,18 @@ if (mevcut > 0 && !sifirla) {
 
 if (sifirla) {
   db.exec(`
+    DELETE FROM ic_tetkik_bulgulari;
+    DELETE FROM ic_tetkik_maddeleri;
+    DELETE FROM ic_tetkik_denetcileri;
+    DELETE FROM ic_tetkikler;
+    DELETE FROM aktivite_loglari WHERE modul = 'tetkik';
+    DELETE FROM ic_tetkik_checklist_maddeleri
+      WHERE checklist_id IN (
+        SELECT id FROM ic_tetkik_checklistleri
+        WHERE kod NOT IN ('CL-ISO-001', 'CL-KI-001')
+      );
+    DELETE FROM ic_tetkik_checklistleri
+      WHERE kod NOT IN ('CL-ISO-001', 'CL-KI-001');
     DELETE FROM dof_aksiyonlari;
     DELETE FROM dof_kayitlari;
     DELETE FROM egitim_katilimcilari;
@@ -42,7 +57,7 @@ if (sifirla) {
     DELETE FROM email_kayitlari;
     DELETE FROM kullanicilar;
   `);
-  console.log('Mevcut doküman, DÖF, eğitim, kullanıcı ve e-posta kayıtları temizlendi.');
+  console.log('Mevcut doküman, DÖF, eğitim, iç tetkik, kullanıcı ve e-posta kayıtları temizlendi.');
 }
 
 const ayarlar = etkinAyarlar(db, config);
@@ -652,12 +667,303 @@ const dofTedarikci = dofEkle({
   aksiyonlar: [],
 });
 
+// ---------------------------------------------------------------------------
+// Faz 5: İç Tetkik (Denetim) örnekleri
+// ---------------------------------------------------------------------------
+const isoChecklist = db
+  .prepare("SELECT id FROM ic_tetkik_checklistleri WHERE kod = 'CL-ISO-001'")
+  .get();
+const kurumChecklist = db
+  .prepare("SELECT id FROM ic_tetkik_checklistleri WHERE kod = 'CL-KI-001'")
+  .get();
+
+function icTetkikEkle({
+  yil,
+  checklistId,
+  baslik,
+  amac,
+  kapsam,
+  yontem,
+  departmanId,
+  planlananTarih,
+  baslangicTarihi = null,
+  bitisTarihi = null,
+  durum = 'planlandi',
+  tamamlayanId = null,
+  denetciler = [],
+}) {
+  const kod = tetkik.tetkikKoduUret(db, yil);
+  const bilgi = db
+    .prepare(
+      `INSERT INTO ic_tetkikler
+        (kod, yil, checklist_id, baslik, amac, kapsam, yontem, departman_id,
+         planlanan_tarih, baslangic_tarihi, bitis_tarihi, durum, olusturan_id,
+         tamamlayan_id, olusturma_tarihi, guncelleme_tarihi)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      kod,
+      yil,
+      checklistId,
+      baslik,
+      amac,
+      kapsam,
+      yontem,
+      departmanId,
+      planlananTarih,
+      baslangicTarihi,
+      bitisTarihi,
+      durum,
+      kalite,
+      tamamlayanId,
+      simdi,
+      simdi
+    );
+  const tetkikId = Number(bilgi.lastInsertRowid);
+  const maddeEkle = db.prepare(
+    `INSERT INTO ic_tetkik_maddeleri
+      (tetkik_id, checklist_madde_id, sira, baslik, kriter, referans, agirlik)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  );
+  const kaynakMaddeler = db
+    .prepare('SELECT * FROM ic_tetkik_checklist_maddeleri WHERE checklist_id = ? ORDER BY sira')
+    .all(checklistId);
+  for (const madde of kaynakMaddeler) {
+    maddeEkle.run(
+      tetkikId,
+      madde.id,
+      madde.sira,
+      madde.baslik,
+      madde.kriter,
+      madde.referans,
+      madde.agirlik
+    );
+  }
+  const atamaEkle = db.prepare(
+    `INSERT INTO ic_tetkik_denetcileri
+      (tetkik_id, kullanici_id, gorev, durum, atayan_id, atama_tarihi, yanit_tarihi, tamamlanma_tarihi)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  for (const denetci of denetciler) {
+    atamaEkle.run(
+      tetkikId,
+      denetci.kullaniciId,
+      denetci.gorev || 'denetci',
+      denetci.durum || 'atanmis',
+      kalite,
+      simdi,
+      denetci.durum && denetci.durum !== 'atanmis' ? simdi : null,
+      denetci.durum === 'tamamlandi' ? simdi : null
+    );
+  }
+  db.prepare(
+    `INSERT INTO aktivite_loglari
+      (modul, islem, kayit_tipi, kayit_id, referans_no, kullanici_id, aciklama, yeni_deger, tarih)
+     VALUES ('tetkik', 'plan_olustur', 'ic_tetkik', ?, ?, ?, ?, ?, ?)`
+  ).run(
+    tetkikId,
+    kod,
+    kalite,
+    `${baslik} iç tetkik planı demo verisi olarak oluşturuldu.`,
+    durum,
+    simdi
+  );
+  return { id: tetkikId, kod };
+}
+
+function tetkikMaddesiDegerlendir(tetkikId, sira, sonuc, puan, aciklama = '', kanit = '') {
+  db.prepare(
+    `UPDATE ic_tetkik_maddeleri
+     SET sonuc = ?, puan = ?, bulgu_aciklama = ?, kanit = ?,
+         degerlendiren_id = ?, degerlendirme_tarihi = ?
+     WHERE tetkik_id = ? AND sira = ?`
+  ).run(sonuc, puan, aciklama, kanit, kalite, simdi, tetkikId, sira);
+}
+
+function tetkikBulguEkle({
+  tetkikId,
+  tetkikKod,
+  maddeId,
+  baslik,
+  tanim,
+  sonuc,
+  departmanId,
+  sorumluId,
+  tespitTarihi,
+  dofId = null,
+}) {
+  const kod = tetkik.bulguKoduUret(db, dofYili);
+  const bilgi = db
+    .prepare(
+      `INSERT INTO ic_tetkik_bulgulari
+        (kod, tetkik_id, madde_id, baslik, tanim, sonuc, departman_id, sorumlu_id,
+         tespit_tarihi, durum, dof_id, olusturan_id, olusturma_tarihi, guncelleme_tarihi)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      kod,
+      tetkikId,
+      maddeId,
+      baslik,
+      tanim,
+      sonuc,
+      departmanId,
+      sorumluId,
+      tespitTarihi,
+      dofId ? 'dof_acildi' : 'acik',
+      dofId,
+      kalite,
+      simdi,
+      simdi
+    );
+  const bulguId = Number(bilgi.lastInsertRowid);
+  db.prepare(
+    `INSERT INTO aktivite_loglari
+      (modul, islem, kayit_tipi, kayit_id, referans_no, kullanici_id, aciklama, yeni_deger, tarih)
+     VALUES ('tetkik', ?, 'ic_tetkik', ?, ?, ?, ?, ?, ?)`
+  ).run(
+    dofId ? 'dof_aktar' : 'bulgu_olustur',
+    tetkikId,
+    `${tetkikKod} / ${kod}`,
+    kalite,
+    dofId ? 'Bulgu demo olarak mevcut DÖF kaydına bağlandı.' : `${baslik} bulgusu kaydedildi.`,
+    dofId ? 'dof_acildi' : 'acik',
+    simdi
+  );
+  return { id: bulguId, kod };
+}
+
+const tamamlananTetkik = icTetkikEkle({
+  yil: dofYili,
+  checklistId: isoChecklist.id,
+  baslik: `${dofYili} Yılı Bakım Süreçleri İç Tetkiki`,
+  amac: 'Bakım planının uygulanabilirliğini ve kritik ekipman kontrollerinin etkinliğini doğrulamak.',
+  kapsam: 'Bakım talimatları, periyodik bakım planı, arıza geçmişi, ekipman kontrol kayıtları ve ilgili çalışan talimatları.',
+  yontem: 'Doküman ve kayıt incelemesi, saha gözlemi, bakım ekibiyle görüşme ve geçmiş arıza verilerinin karşılaştırılması.',
+  departmanId: bakimDepartman,
+  planlananTarih: `${dofYili}-03-15`,
+  baslangicTarihi: `${dofYili}-03-20`,
+  bitisTarihi: `${dofYili}-04-05`,
+  durum: 'tamamlandi',
+  tamamlayanId: kalite,
+  denetciler: [
+    { kullaniciId: kalite, gorev: 'bas_denetci', durum: 'tamamlandi' },
+    { kullaniciId: bakimci, gorev: 'denetci', durum: 'tamamlandi' },
+  ],
+});
+
+for (let sira = 1; sira <= 10; sira += 1) {
+  const major = sira === 8;
+  tetkikMaddesiDegerlendir(
+    tamamlananTetkik.id,
+    sira,
+    major ? 'major' : 'uygun',
+    major ? 0 : 100,
+    major
+      ? 'Kritik ekipmanların yağlama periyotları bakım planında tanımlı değildi.'
+      : 'İncelenen kontrol ve kayıtlar kurum içi beklentiyle uyumludur.',
+    major ? 'Bakım planı ve ekipman kontrol listesi incelemesi.' : 'İlgili güncel kayıtlar.'
+  );
+}
+const tamamlananMadde8 = db
+  .prepare('SELECT id FROM ic_tetkik_maddeleri WHERE tetkik_id = ? AND sira = 8')
+  .get(tamamlananTetkik.id);
+tetkikBulguEkle({
+  tetkikId: tamamlananTetkik.id,
+  tetkikKod: tamamlananTetkik.kod,
+  maddeId: tamamlananMadde8.id,
+  baslik: 'Kritik ekipman yağlama periyotları planlanmamış',
+  tanim:
+    'Kritik ekipmanların yağlama periyotları bakım planında üretici önerileriyle eşleştirilmemiş ve plansız duruş riski taşımaktadır.',
+  sonuc: 'major',
+  departmanId: bakimDepartman,
+  sorumluId: bakimci,
+  tespitTarihi: `${dofYili}-04-02`,
+  dofId: dofBakim,
+});
+db.prepare(
+  `UPDATE dof_kayitlari
+   SET uygunsuzluk_tanimi = ?
+   WHERE id = ?`
+).run(
+  `[${tamamlananTetkik.kod} / BUL-${dofYili}-001] İç tetkikte kritik ekipmanların yağlama periyotlarının bakım planında tanımlı olmadığı görüldü. Bu durum plansız duruş riski oluşturuyor.`,
+  dofBakim
+);
+
+const devamEdenTetkik = icTetkikEkle({
+  yil: dofYili,
+  checklistId: isoChecklist.id,
+  baslik: `${dofYili} Yılı Üretim Süreçleri İç Tetkiki`,
+  amac: 'Üretim operasyonlarının tanımlı kalite dokümanlarına uyumunu ve izlenebilirliğini değerlendirmek.',
+  kapsam: 'Üretim planlama, operasyon talimatları, ilk ürün kontrolü, sevkiyat öncesi kontroller ve ilgili kayıtlar.',
+  yontem: 'Saha gözlemi, üretim kayıtları örneklemesi, ilgili doküman incelemesi ve operatör görüşmeleri.',
+  departmanId: uretimDepartman,
+  planlananTarih: `${dofYili}-10-05`,
+  baslangicTarihi: `${dofYili}-10-12`,
+  durum: 'devam_ediyor',
+  denetciler: [
+    { kullaniciId: kalite, gorev: 'bas_denetci', durum: 'kabul_edildi' },
+    { kullaniciId: hazirlayan, gorev: 'denetci', durum: 'kabul_edildi' },
+  ],
+});
+const devamSonuclar = [
+  [1, 'uygun', 100],
+  [2, 'minor', 50],
+  [3, 'uygun', 100],
+  [4, 'uygun', 100],
+];
+for (const [sira, sonuc, puan] of devamSonuclar) {
+  tetkikMaddesiDegerlendir(
+    devamEdenTetkik.id,
+    sira,
+    sonuc,
+    puan,
+    sonuc === 'minor'
+      ? 'Üretim vardiya değişim kayıtlarında kontrol sorumlulukları her vardiyada açıkça belirtilmemiş.'
+      : '',
+    sonuc === 'minor' ? 'Vardiya formu ve operasyon talimatı incelemesi.' : 'Güncel operasyon kayıtları.'
+  );
+}
+const devamMadde2 = db
+  .prepare('SELECT id FROM ic_tetkik_maddeleri WHERE tetkik_id = ? AND sira = 2')
+  .get(devamEdenTetkik.id);
+tetkikBulguEkle({
+  tetkikId: devamEdenTetkik.id,
+  tetkikKod: devamEdenTetkik.kod,
+  maddeId: devamMadde2.id,
+  baslik: 'Vardiya değişim kontrol sorumluluğu belirsiz',
+  tanim:
+    'Üretim vardiya değişim formunda kalite kontrol sorumluluğu açıkça tanımlanmamış ve iki vardiya arasında örneklemelerde boş alan bulunmuştur.',
+  sonuc: 'minor',
+  departmanId: uretimDepartman,
+  sorumluId: hazirlayan,
+  tespitTarihi: `${dofYili}-10-18`,
+});
+
+const planlananTetkik = icTetkikEkle({
+  yil: dofYili,
+  checklistId: kurumChecklist.id,
+  baslik: `${dofYili} Yılı İnsan Kaynakları İç Tetkiki`,
+  amac: 'Personel eğitim, yetkinlik ve çalışan kayıtlarının kurum içi kontrollerle uyumunu doğrulamak.',
+  kapsam: 'Eğitim planı, personel yetkinlik kayıtları, işe alım ve oryantasyon kayıtları ile ilgili kalite dokümanları.',
+  yontem: 'Kayıt incelemesi, personel görüşmesi ve yıllık eğitim planının yeterlilik analizi.',
+  departmanId: db.prepare("SELECT id FROM departmanlar WHERE ad = 'İnsan Kaynakları'").get().id,
+  planlananTarih: `${dofYili}-12-08`,
+  durum: 'planlandi',
+  denetciler: [
+    { kullaniciId: kalite, gorev: 'bas_denetci', durum: 'atanmis' },
+    { kullaniciId: admin, gorev: 'gozlemci', durum: 'atanmis' },
+  ],
+});
+
 const sayilar = {
   kullanici: db.prepare('SELECT COUNT(*) AS sayi FROM kullanicilar').get().sayi,
   dokuman: db.prepare('SELECT COUNT(*) AS sayi FROM dokumanlar').get().sayi,
   yayinda: db.prepare("SELECT COUNT(*) AS sayi FROM dokumanlar WHERE durum = 'yayinda'").get().sayi,
   dof: db.prepare('SELECT COUNT(*) AS sayi FROM dof_kayitlari').get().sayi,
   dofAksiyon: db.prepare('SELECT COUNT(*) AS sayi FROM dof_aksiyonlari').get().sayi,
+  tetkik: db.prepare('SELECT COUNT(*) AS sayi FROM ic_tetkikler').get().sayi,
+  tetkikBulgu: db.prepare('SELECT COUNT(*) AS sayi FROM ic_tetkik_bulgulari').get().sayi,
 };
 
 console.log('');
@@ -665,6 +971,7 @@ console.log('Örnek QDMS verileri oluşturuldu.');
 console.log(`  Kullanıcı : ${sayilar.kullanici}`);
 console.log(`  Doküman   : ${sayilar.dokuman} (${sayilar.yayinda} yayında)`);
 console.log(`  DÖF       : ${sayilar.dof} kayıt, ${sayilar.dofAksiyon} aksiyon`);
+console.log(`  İç Tetkik : ${sayilar.tetkik} plan, ${sayilar.tetkikBulgu} bulgu`);
 console.log(`  Bugün     : ${bugun}`);
 console.log(`  Veritabanı: ${config.dbPath}`);
 console.log('');

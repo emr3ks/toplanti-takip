@@ -28,6 +28,8 @@ const IZINLER = Object.freeze({
     'rapor',
     'dof',
     'dof.kapat',
+    'tetkik',
+    'tetkik.kapat',
   ],
   kalite: [
     'sablon',
@@ -40,6 +42,8 @@ const IZINLER = Object.freeze({
     'rapor',
     'dof',
     'dof.kapat',
+    'tetkik',
+    'tetkik.kapat',
   ],
   hazirlayan: ['dokuman.olustur', 'dokuman.duzenle'],
   onaylayan: ['dokuman.onayla'],

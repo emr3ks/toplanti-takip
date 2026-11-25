@@ -1,0 +1,79 @@
+<%- include('partials/ust', { aktifSayfa: 'tetkik-checklistler' }) %>
+
+<div class="sayfa-bas">
+  <div>
+    <h1>Denetim Kontrol Listeleri</h1>
+    <p>ISO 9001 ve kurum içi denetim soru listelerini oluşturun, maddeleri ve ağırlıkları yönetin.</p>
+  </div>
+  <div class="sayfa-eylem">
+    <a class="btn btn-hayalet" href="/tetkik">İç Tetkik Listesi</a>
+  </div>
+</div>
+
+<div class="tetkik-checklist-izgara">
+  <% listeler.forEach(function (checklist) { %>
+    <section class="kart tetkik-checklist-kart">
+      <div class="kart-bas">
+        <div>
+          <span class="rozet <%= checklist.standart === 'iso_9001' ? 'tetkik-standart-iso' : 'tetkik-standart-kurum' %>"><%= TETKIK_STANDARTLARI[checklist.standart] %></span>
+          <h2><%= checklist.ad %></h2>
+          <p class="mono"><%= checklist.kod %> · Rev. <%= checklist.versiyon %></p>
+        </div>
+        <span class="rozet"><%= checklist.madde_sayisi %> madde</span>
+      </div>
+      <p><%= checklist.aciklama || 'Açıklama girilmemiş.' %></p>
+      <details class="tetkik-checklist-detay">
+        <summary>Madde listesini göster</summary>
+        <ol class="tetkik-checklist-madde-liste">
+          <% checklist.maddeler.forEach(function (madde) { %>
+            <li>
+              <strong><%= madde.baslik %></strong>
+              <span><%= madde.kriter %></span>
+              <small class="mono"><%= madde.referans || 'Referans yok' %> · Ağırlık <%= madde.agirlik %></small>
+            </li>
+          <% }) %>
+        </ol>
+      </details>
+      <p class="metin-kucuk metin-soluk"><%= checklist.kullanim_sayisi %> iç tetkikte kullanıldı.</p>
+    </section>
+  <% }) %>
+</div>
+
+<% if (tetkikYetkisi) { %>
+  <section class="kart tetkik-yeni-checklist-kart">
+    <div class="kart-bas">
+      <div>
+        <h2>Yeni Kontrol Listesi Oluştur</h2>
+        <p>Her satır bir madde olacak şekilde <strong>başlık | kriter | referans | ağırlık</strong> biçiminde girin.</p>
+      </div>
+    </div>
+    <form method="post" action="/tetkik/checklistler" class="tetkik-yeni-checklist-form">
+      <div class="form-grid">
+        <div class="alan">
+          <label for="checklist-standart">Standart</label>
+          <select class="girdi" id="checklist-standart" name="standart" required>
+            <% standartAnahtarlari.forEach(function (anahtar) { %>
+              <option value="<%= anahtar %>"><%= standartlar[anahtar] %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="alan">
+          <label for="checklist-ad">Kontrol Listesi Adı</label>
+          <input class="girdi" type="text" id="checklist-ad" name="ad" minlength="3" maxlength="200" required placeholder="Örn. Satın Alma Süreçleri Kontrol Listesi">
+        </div>
+        <div class="alan tam">
+          <label for="checklist-aciklama">Açıklama</label>
+          <textarea class="girdi" id="checklist-aciklama" name="aciklama" maxlength="2000" rows="3" placeholder="Kontrol listesinin amacı ve kullanım alanı…"></textarea>
+        </div>
+        <div class="alan tam">
+          <label for="checklist-maddeler">Kontrol Maddeleri</label>
+          <textarea class="girdi mono" id="checklist-maddeler" name="madde_satirlari" rows="9" required placeholder="Doküman kontrolü | Yayındaki dokümanlar güncel ve revizyon kontrollü mü? | Kurum İçi - Doküman Yönetimi | 3&#10;Kayıt yönetimi | Kalite kayıtları izlenebilir ve saklama sürelerine uygun mu? | Kurum İçi - Kayıt Saklama | 4"></textarea>
+          <span class="ipucu">Başlık | kriter | referans | 1-10 ağırlık. En fazla 100 madde.</span>
+        </div>
+      </div>
+      <button class="btn btn-birincil" type="submit">Kontrol Listesini Oluştur</button>
+    </form>
+  </section>
+<% } %>
+
+<%- include('partials/alt') %>

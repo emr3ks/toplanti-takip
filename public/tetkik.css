@@ -1,0 +1,400 @@
+/* Faz 5 — İç Tetkik (Denetim) Yönetimi */
+
+.tetkik-istatistik .stat-ikon.tetkik-ikon,
+.tetkik-ozet-istatistik .stat {
+  min-height: 104px;
+}
+
+.tetkik-kod-link {
+  color: var(--primary, #1e3a8a);
+  text-decoration: none;
+}
+
+.tetkik-kod-link:hover {
+  text-decoration: underline;
+}
+
+.tetkik-durum-planlandi {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.tetkik-durum-devam {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.tetkik-durum-tamamlandi {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tetkik-sonuc-uygun {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tetkik-sonuc-minor {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.tetkik-sonuc-major {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.tetkik-sonuc-gozlem {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.tetkik-bulgu-rozeti {
+  background: #f1f5f9;
+  color: #475569;
+  margin-right: 4px;
+}
+
+.tetkik-satir-eylem,
+.tetkik-durum-eylem {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tetkik-ilerleme {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #334155;
+  font-weight: 700;
+}
+
+.tetkik-detay-ust {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.tetkik-metin-bloklar {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.tetkik-metin-bloklar > div {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.tetkik-metin-bloklar p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+
+.tetkik-checklist-sarmal {
+  max-height: 760px;
+  overflow: auto;
+}
+
+.tetkik-checklist-tablo {
+  min-width: 1120px;
+}
+
+.tetkik-checklist-tablo td {
+  vertical-align: top;
+}
+
+.tetkik-checklist-tablo td small {
+  display: block;
+  margin-top: 4px;
+  white-space: normal;
+}
+
+.tetkik-checklist-tablo textarea {
+  min-width: 210px;
+  margin-bottom: 6px;
+}
+
+.tetkik-puan-girdi {
+  width: 92px;
+}
+
+.tetkik-degerlendirilmis {
+  background: #f8fafc;
+}
+
+.tetkik-gizli-form {
+  display: none;
+}
+
+.tetkik-akis {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.tetkik-akis li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  color: #64748b;
+}
+
+.tetkik-akis li > span {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tetkik-akis li.aktif {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.tetkik-akis li.aktif > span {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.tetkik-akis li.tam {
+  color: #166534;
+}
+
+.tetkik-akis li.tam > span {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tetkik-denetci-liste {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tetkik-denetci-satir {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tetkik-denetci-satir > span:nth-child(2) {
+  min-width: 0;
+}
+
+.tetkik-denetci-satir strong,
+.tetkik-denetci-satir small {
+  display: block;
+}
+
+.tetkik-denetci-satir small {
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.tetkik-denetci-form {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.tetkik-bulgu-tablo {
+  min-width: 1020px;
+}
+
+.tetkik-bulgu-tablo td small {
+  display: block;
+  margin-top: 4px;
+  white-space: normal;
+}
+
+.tetkik-bulgu-ekle,
+.tetkik-checklist-detay {
+  margin-top: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.tetkik-bulgu-ekle summary,
+.tetkik-checklist-detay summary {
+  cursor: pointer;
+  padding: 14px 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tetkik-bulgu-ekle form,
+.tetkik-checklist-detay > *:not(summary) {
+  margin: 0 16px 16px;
+}
+
+.aktivite-liste {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+}
+
+.aktivite-liste li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 11px;
+  padding: 11px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.aktivite-liste li:last-child {
+  border-bottom: 0;
+}
+
+.aktivite-liste strong,
+.aktivite-liste small {
+  display: block;
+}
+
+.aktivite-liste small {
+  color: #64748b;
+  margin-top: 3px;
+}
+
+.aktivite-nokta {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #2563eb;
+  box-shadow: 0 0 0 4px #dbeafe;
+}
+
+.tetkik-takvim-izgara,
+.tetkik-checklist-izgara {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.tetkik-ay-kart,
+.tetkik-checklist-kart {
+  min-height: 180px;
+}
+
+.tetkik-ay-kart .kart-bas,
+.tetkik-checklist-kart .kart-bas {
+  align-items: flex-start;
+}
+
+.ay-no {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.tetkik-ay-kayitlari {
+  display: grid;
+  gap: 8px;
+}
+
+.tetkik-takvim-kayit {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #2563eb;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  background: #f8fafc;
+}
+
+.tetkik-takvim-kayit:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.tetkik-takvim-kayit small {
+  color: #64748b;
+}
+
+.tetkik-ay-bos {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.tetkik-standart-iso {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.tetkik-standart-kurum {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.tetkik-checklist-madde-liste {
+  margin: 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 12px;
+}
+
+.tetkik-checklist-madde-liste li {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tetkik-checklist-madde-liste span,
+.tetkik-checklist-madde-liste small {
+  display: block;
+  margin-top: 4px;
+}
+
+.tetkik-checklist-madde-liste small {
+  color: #64748b;
+}
+
+.tetkik-yeni-checklist-kart {
+  margin-top: 18px;
+}
+
+@media (max-width: 1200px) {
+  .tetkik-takvim-izgara,
+  .tetkik-checklist-izgara {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .tetkik-takvim-izgara,
+  .tetkik-checklist-izgara {
+    grid-template-columns: 1fr;
+  }
+
+  .tetkik-detay-kolonlar {
+    grid-template-columns: 1fr;
+  }
+}
