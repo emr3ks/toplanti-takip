@@ -61,13 +61,14 @@
     <% if (tetkikYetkisi && kayit.durum !== 'tamamlandi') { %>
       <section class="kart">
         <div class="kart-bas">
-          <div><h2>Plan Künyesini Düzenle</h2><p>Yıl, departman, kontrol listesi ve kapsam bilgilerini güncelleyin.</p></div>
+          <div><h2>Plan Künyesini Düzenle</h2><p>Departman, kontrol listesi ve kapsam bilgilerini güncelleyin. Denetim yılı ve referans numarası oluşturulduktan sonra değiştirilemez.</p></div>
         </div>
         <form method="post" action="/tetkik/<%= kayit.id %>" class="tetkik-duzenle-form">
           <div class="form-grid">
             <div class="alan">
               <label for="duzenle-yil">Yıl</label>
-              <input class="girdi" type="number" id="duzenle-yil" name="yil" value="<%= kayit.yil %>" min="2000" max="2200" required>
+              <input class="girdi" type="number" id="duzenle-yil" name="yil" value="<%= kayit.yil %>" min="2000" max="2200" required readonly aria-readonly="true">
+              <span class="ipucu">Denetim yılı ve referans numarası değiştirilemez.</span>
             </div>
             <div class="alan">
               <label for="duzenle-departman">Departman</label>

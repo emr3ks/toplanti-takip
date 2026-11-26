@@ -70,6 +70,18 @@ Faz 3 dashboard’unda DÖF menüsü ve özet kartı yoktu; Faz 4 ile sol menüy
 | --- |
 | ![DÖF PDF Kapalı](docs/screenshots/after-faz4-dof-pdf.png) |
 
+### İç Tetkik Yönetimi — Faz 5
+
+Görseller gerçek uygulama ekranlarından, aynı yönetici oturumu, açık tema ve **1440×1000** görüntü penceresinde alınmıştır. Önce sürüm Faz 4 birleşim revizyonu `621af5f`, sonraki sürüm bu ticket dalındaki Faz 5 uygulaması (`agent/qdms-phase5-audit-ed84e3e382b5`) ile karşılaştırılmıştır.
+
+| Önce — Faz 4 dashboard (iç tetkik menüsü yok) | Sonra — Faz 5 dashboard |
+| --- | --- |
+| ![Önce Dashboard](docs/screenshots/before-faz5-dashboard.png) | ![Sonra Dashboard](docs/screenshots/after-faz5-dashboard.png) |
+
+| Önce — `/tetkik` rotası bulunmuyor (404) | Sonra — İç Tetkik Yönetimi |
+| --- | --- |
+| ![Önce İç Tetkik](docs/screenshots/before-faz5-tetkik.png) | ![Sonra İç Tetkik](docs/screenshots/after-faz5-tetkik.png) |
+
 ### PDF Logo — Önce / Sonra
 
 Faz 2 temel revizyonunda (`4fb8d0a`) yüklenen WEBP logo PDFKit tarafından sessizce atlanıyordu; PNG logo ise antet tablosunun dışında, ayrı bir görsel olarak basılıyordu. Faz 3 revizyonunda logo, tüm PDF’lerde sol üst antet kutusunda orantılı olarak basılır ve desteklenmeyen formatlar sessizce kaybolmaz.
@@ -156,7 +168,7 @@ Tarayıcıda **http://127.0.0.1:3005** adresini açın. Farklı bir port için `
 
 DÖF görünürlüğü: Sistem Yöneticisi ve Kalite Yöneticisi tüm kayıtları görür; diğer kullanıcılar yalnızca kendi departmanlarının, kendilerinin açtığı veya aksiyon sorumlusu oldukları DÖF kayıtlarını görüntüler. Yetkisiz sayfalara erişim `403`, oturum yoksa giriş ekranına yönlendirme ile korunur. Tüm POST işlemleri oturum gerektirir.
 
-İç tetkik görünürlüğü aynı ilkeyi izler: Sistem Yöneticisi ve Kalite Yöneticisi tüm tetkikleri yönetir; diğer kullanıcılar yalnızca kendi departmanlarına ait, kendi oluşturdukları veya denetçi olarak atandıkları tetkikleri görüntüler. Atanmış denetçi, kendi tetkikindeki maddeleri değerlendirebilir ve bulgu kaydedebilir; DÖF açma ve tetkik tamamlama yetkileri Kalite Yöneticisi/Sistem Yöneticisi ile sınırlıdır.
+İç tetkik görünürlüğü aynı ilkeyi izler: Sistem Yöneticisi ve Kalite Yöneticisi tüm tetkikleri yönetir; diğer kullanıcılar yalnızca kendi departmanlarına ait, kendi oluşturdukları veya denetçi olarak atandıkları tetkikleri görüntüler. Baş denetçi ve denetçi, kendi tetkikindeki maddeleri değerlendirebilir ve bulgu kaydedebilir; gözlemci ataması yalnızca görüntüleme hakkı verir. DÖF açma ve tetkik tamamlama yetkileri Kalite Yöneticisi/Sistem Yöneticisi ile sınırlıdır.
 
 ## Modüller
 
@@ -242,7 +254,7 @@ DÖF görünürlüğü: Sistem Yöneticisi ve Kalite Yöneticisi tüm kayıtlar�
 
 ### 10. Organizasyon ve Kullanıcılar
 
-- Sistem Yöneticisi yeni departman açar/düzenler/siler (kullanıcı atanmış departman silinemez).
+- Sistem Yöneticisi yeni departman açar/düzenler/siler. Kullanıcı, iç tetkik, bulgu veya DÖF kaydı bulunan departman silinemez; böylece geçmiş kayıtların departman atfı korunur.
 - Kullanıcı oluşturma, rol ve departman atama, hesabı aktif/pasif yapma, şifre belirleme.
 - Her kullanıcı kendi şifresini değiştirebilir. Sistemde en az bir aktif yönetici kalması korunur.
 
@@ -265,14 +277,14 @@ DÖF görünürlüğü: Sistem Yöneticisi ve Kalite Yöneticisi tüm kayıtlar�
 
 ### 13. İç Tetkik (Denetim) Yönetimi (Faz 5)
 
-- **Yıllık takvim ve planlama:** Denetim yılı, denetlenecek departman, başlık, amaç, kapsam, yöntem ve planlanan tarihle `IT-YYYY-NNN` referanslı plan oluşturulur. Liste ekranı yıl/durum/departman/arama filtreleriyle, ay ay takvim ekranıyla birlikte kullanılır.
-- **Denetçi ekibi ve durum takibi:** Baş denetçi, denetçi ve gözlemci atanır; atama, kabul ve tamamlama durumları ayrı ayrı izlenir. Atanmış denetçi kaydı, ilgili departmandaki personel ve planı oluşturan kullanıcı görüntüleyebilir.
+- **Yıllık takvim ve planlama:** Denetim yılı, denetlenecek departman, başlık, amaç, kapsam, yöntem ve planlanan tarihle `IT-YYYY-NNN` referanslı plan oluşturulur. Denetim yılı ve referans numarası oluşturulduktan sonra değiştirilemez; böylece yıl takvimi ile plan tarihi ve referans numarası tutarlı kalır. Liste ekranı yıl/durum/departman/arama filtreleriyle, ay ay takvim ekranıyla birlikte kullanılır.
+- **Denetçi ekibi ve durum takibi:** Baş denetçi, denetçi ve gözlemci atanır; atama, kabul ve tamamlama durumları ayrı ayrı izlenir. Atanmış denetçi kaydı, ilgili departmandaki personel ve planı oluşturan kullanıcı görüntüleyebilir. Gözlemci görevlendirmesi salt okunurdur; yalnızca baş denetçi ve denetçiler madde değerlendirebilir, bulgu kaydedebilir ve denetimi başlatabilir.
 - **Kontrol listeleri:** Hazır ISO 9001 ve kurum içi listelerle birlikte yeni, çok maddeli kontrol listeleri oluşturulabilir. Plan oluşturulurken listenin maddeleri denetime snapshot olarak kopyalanır; sonradan şablon değişikliği geçmiş denetimi bozmaz.
 - **Madde bazlı değerlendirme:** Her madde `Uygun`, `Minör Uygunsuzluk`, `Majör Uygunsuzluk` veya `Gözlem` olarak değerlendirilir. Ağırlıklar kullanılarak 0–100 aralığında genel uyumluluk puanı hesaplanır; puan boş bırakılırsa sonuca göre varsayılan değer kullanılır.
-- **Bulgu ve DÖF entegrasyonu:** Tespitler `BUL-YYYY-NNN` referansıyla bulgu olarak kaydedilir. Minör/majör bulgular tek tıkla, `IT-YYYY-NNN / BUL-YYYY-NNN` referansları DÖF tanımına işlenerek atomik biçimde Faz 4 DÖF modülüne aktarılır. Aynı bulgu ikinci kez DÖF oluşturmaz; DÖF detayından iç tetkik/bulgu bağlantısına dönülebilir.
-- **Tamamlama kontrolleri:** Tetkik ancak bütün maddeler değerlendirilmiş, uygunsuzluk maddeleri için bulgu kaydedilmiş ve minör/majör bulgular DÖF'e bağlanmışsa `Tamamlandı` durumuna geçebilir.
+- **Bulgu ve DÖF entegrasyonu:** Tespitler `BUL-YYYY-NNN` referansıyla bulgu olarak kaydedilir. Minör/majör bulgular tek tıkla, `IT-YYYY-NNN / BUL-YYYY-NNN` referansları DÖF tanımına işlenerek atomik biçimde Faz 4 DÖF modülüne aktarılır. Oluşturulan DÖF numarası Faz 4 ile aynı biçimde bulgunun tespit yılından türetilir. Aynı bulgu ikinci kez DÖF oluşturmaz; DÖF detayından iç tetkik/bulgu bağlantısına dönülebilir ve bağlı DÖF kapatıldığında bulgu durumu da `Kapatıldı` olarak güncellenir.
+- **Tamamlama kontrolleri:** Tetkik ancak bütün maddeler değerlendirilmiş, her minör/majör madde için aynı sınıfta bulgu kaydedilmiş ve minör/majör bulgular DÖF'e bağlanmışsa `Tamamlandı` durumuna geçebilir.
 - **PDF denetim raporu:** Kurumsal logolu A4 raporda tetkik künyesi, amaç/kapsam/yöntem, genel puan, dört sonuç dağılımı, bütün checklist sonuçları, bulgular ve açılan DÖF referansları bulunur. Sayfa sonunda baş denetçi ve tamamlayan imza kutuları yer alır.
-- **Aktivite izi:** Plan oluşturma/güncelleme, denetçi atama, durum, madde değerlendirmesi, bulgu ve DÖF aktarımı ortak `aktivite_loglari` tablosuna kullanıcı/tarih/eski-yeni değer bilgisiyle yazılır.
+- **Aktivite izi:** Plan oluşturma/güncelleme, denetçi atama, durum, madde değerlendirmesi, bulgu ve DÖF aktarımı ortak `aktivite_loglari` tablosuna kullanıcı/tarih bilgisiyle yazılır. Plan, atama ve madde değişikliklerinde değişen her alanın eski ve yeni değeri ayrı kayıtta saklanır.
 
 ## PDF Tasarımı
 
@@ -285,7 +297,7 @@ DÖF görünürlüğü: Sistem Yöneticisi ve Kalite Yöneticisi tüm kayıtlar�
 - Logo; yüklenen PNG/JPG dosyasından veya Base64/data-URI verisinden okunur, en-boy oranı korunarak kutuya sığdırılır. WEBP gibi PDFKit’in çözemediği formatlar sessizce atlanmaz; yükleme reddedilir ve mevcut kayıt için uyarı gösterilir.
 - Türkçe karakterler için Unicode TTF gömülür; font bulunamazsa güvenli bir yedek yazı tipi ve Türkçe karakter dönüşümü kullanılır.
 - **DÖF raporu** ayrı bir antetli form olarak üretilir: kırmızı kurumsal antet bandı, logo kutusu ve şirket adı; DÖF No, tür, durum ve tespit tarihi tablosu; künye, uygunsuzluk tanımı, acil önlem, kök neden, aksiyon tablosu (sorumlu, hedef tarih, durum, kanıt) ve etkinlik değerlendirmesi/kapanış imza kutuları. Aksiyon tablosu sayfa sonunda bölünebilir ve her yeni sayfada antet yeniden basılır.
-- **İç tetkik raporu** kurumsal logo kutusu ve renkli antetle üretilir; tetkik künyesi, yöntem özeti, puan/sonuç dağılımı, sayfalara bölünen bütün checklist ve bulgu tabloları, DÖF referansları ve iki imza kutusu içerir.
+- **İç tetkik raporu** kurumsal logo kutusu ve renkli antetle üretilir; tetkik künyesi, yöntem özeti, puan/sonuç dağılımı, sayfalara bölünen bütün checklist ve bulgu tabloları, DÖF referansları ve iki imza kutusu içerir. Azami uzunlukta alanlar hücre sınırına göre kısaltılır ve `… [içerik kısaltıldı]` işaretiyle belirtilir; kaydın tamamı sistemde korunur.
 
 ## Demo Verisi
 

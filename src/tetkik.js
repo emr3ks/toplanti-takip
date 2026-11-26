@@ -176,7 +176,10 @@ function tetkikDuzenlemeErisimiVar(db, kullanici, tetkik, tamErisim = false) {
   if (tamErisim) return true;
   return Boolean(
     db
-      .prepare('SELECT 1 FROM ic_tetkik_denetcileri WHERE tetkik_id = ? AND kullanici_id = ?')
+      .prepare(
+        `SELECT 1 FROM ic_tetkik_denetcileri
+         WHERE tetkik_id = ? AND kullanici_id = ? AND gorev IN ('bas_denetci', 'denetci')`
+      )
       .get(tetkik.id, kullanici.id)
   );
 }

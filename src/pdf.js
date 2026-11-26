@@ -1583,6 +1583,24 @@ async function tetkikPdfUret({
       if (!yerVarMi(gerekli)) yeniSayfa();
     }
 
+    const TABLO_BASLIK_YUKSEKLIGI = 21;
+    const KISALTMA_ISARETI = yazi('… [içerik kısaltıldı]');
+
+    function tabloSatirTavanYuksekligi() {
+      return Math.floor(
+        icerikAltSinir() - 4 - (KENAR.ust + TABLO_BASLIK_YUKSEKLIGI)
+      );
+    }
+
+    function sinirliHucreCiz(metin, x, y, genislik, yukseklik, lineGap = 1.2) {
+      doc.text(yazi(metin), x, y, {
+        width: genislik,
+        height: Math.max(1, yukseklik),
+        lineGap,
+        ellipsis: KISALTMA_ISARETI,
+      });
+    }
+
     function antetCiz() {
       const x = KENAR.sol;
       const ust = 34;
@@ -1709,7 +1727,7 @@ async function tetkikPdfUret({
         width: ICERIK_GENISLIK - 96,
         lineGap: 1.5,
       });
-      const satirYukseklik = Math.max(19, metinYukseklik + 5);
+      const satirYukseklik = Math.min(Math.max(19, metinYukseklik + 5), 220);
       boslukAyir(satirYukseklik + 4);
       const y = doc.y;
       doc
@@ -1732,11 +1750,19 @@ async function tetkikPdfUret({
       doc
         .font(govde)
         .fontSize(9.2)
-        .fillColor('#1f2937')
-        .text(yazi(metin), KENAR.sol + 96, y + 5, {
-          width: ICERIK_GENISLIK - 96,
-          lineGap: 1.5,
-        });
+        .fillColor('#1f2937');
+      const icerikYuksekligi =
+        metinYukseklik > satirYukseklik - 5
+          ? satirYukseklik - 5
+          : metinYukseklik + 12;
+      sinirliHucreCiz(
+        metin,
+        KENAR.sol + 96,
+        y + 5,
+        ICERIK_GENISLIK - 96,
+        icerikYuksekligi,
+        1.5
+      );
       doc.y = y + satirYukseklik + 4;
     }
 
@@ -1923,7 +1949,14 @@ async function tetkikPdfUret({
             lineGap: 1.2,
           })
         );
-        const satirYukseklik = Math.max(19, Math.ceil(Math.max(...icYukseklikler)) + 8);
+        const dogalSatirYuksekligi = Math.max(
+          19,
+          Math.ceil(Math.max(...icYukseklikler)) + 8
+        );
+        const satirYukseklik = Math.min(
+          dogalSatirYuksekligi,
+          tabloSatirTavanYuksekligi()
+        );
 
         if (y + satirYukseklik > icerikAltSinir() - 4) {
           yeniSayfa();
@@ -1969,11 +2002,18 @@ async function tetkikPdfUret({
             doc
               .font(govde)
               .fontSize(7.2)
-              .fillColor('#1f2937')
-              .text(yazi(degerler[indeks]), x + 4, y + 4, {
-                width: kolon.genislik - 8,
-                lineGap: 1.2,
-              });
+              .fillColor('#1f2937');
+            const icerikYuksekligi =
+              icYukseklikler[indeks] > satirYukseklik - 4
+                ? satirYukseklik - 4
+                : icYukseklikler[indeks] + 12;
+            sinirliHucreCiz(
+              degerler[indeks],
+              x + 4,
+              y + 4,
+              kolon.genislik - 8,
+              icerikYuksekligi
+            );
           }
           x += kolon.genislik;
         });
@@ -2066,7 +2106,14 @@ async function tetkikPdfUret({
             lineGap: 1.2,
           })
         );
-        const satirYukseklik = Math.max(21, Math.ceil(Math.max(...icYukseklikler)) + 8);
+        const dogalSatirYuksekligi = Math.max(
+          21,
+          Math.ceil(Math.max(...icYukseklikler)) + 8
+        );
+        const satirYukseklik = Math.min(
+          dogalSatirYuksekligi,
+          tabloSatirTavanYuksekligi()
+        );
 
         if (y + satirYukseklik > icerikAltSinir() - 4) {
           yeniSayfa();
@@ -2089,11 +2136,18 @@ async function tetkikPdfUret({
           doc
             .font(govde)
             .fontSize(7.2)
-            .fillColor('#1f2937')
-            .text(yazi(degerler[indeks]), x + 4, y + 4, {
-              width: kolon.genislik - 8,
-              lineGap: 1.2,
-            });
+            .fillColor('#1f2937');
+          const icerikYuksekligi =
+            icYukseklikler[indeks] > satirYukseklik - 4
+              ? satirYukseklik - 4
+              : icYukseklikler[indeks] + 12;
+          sinirliHucreCiz(
+            degerler[indeks],
+            x + 4,
+            y + 4,
+            kolon.genislik - 8,
+            icerikYuksekligi
+          );
           x += kolon.genislik;
         });
         y += satirYukseklik;
