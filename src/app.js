@@ -1579,6 +1579,22 @@ function createApp({ db, config, mailService = null }) {
         `"${departman.ad}" departmanında ${kullaniciSayisi} kullanıcı var; önce kullanıcıları başka departmana taşıyın.`
       );
     }
+    const kaliciKayitSayisi = db
+      .prepare(
+        `SELECT
+          (SELECT COUNT(*) FROM ic_tetkikler WHERE departman_id = ?) +
+          (SELECT COUNT(*) FROM ic_tetkik_bulgulari WHERE departman_id = ?) +
+          (SELECT COUNT(*) FROM dof_kayitlari WHERE departman_id = ?) AS sayi`
+      )
+      .get(id, id, id).sayi;
+    if (Number(kaliciKayitSayisi) > 0) {
+      return yonlendir(
+        res,
+        '/organizasyon',
+        'hata',
+        `"${departman.ad}" departmanına bağlı ${kaliciKayitSayisi} iç tetkik, bulgu veya DÖF kaydı var; geçmiş atıfın korunması için departman silinemez.`
+      );
+    }
     db.prepare('DELETE FROM departmanlar WHERE id = ?').run(id);
     return yonlendir(res, '/organizasyon', 'ok', `"${departman.ad}" departmanı silindi.`);
   });

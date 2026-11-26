@@ -94,13 +94,27 @@ function aktiviteEkle(db, kayit) {
     String(kayit.referansNo || ''),
     kayit.kullaniciId || null,
     String(kayit.aciklama || '').slice(0, 1000),
-    String(kayit.eskiDeger || '').slice(0, 500),
-    String(kayit.yeniDeger || '').slice(0, 500),
+    String(kayit.eskiDeger || '').slice(0, 2000),
+    String(kayit.yeniDeger || '').slice(0, 2000),
     new Date().toISOString()
   );
 }
 
-function bildirimEkle(db, kullaniciId, baslik, mesaj, tetkikId) {
+function degisiklikleriKaydet(db, kayit, alanlar) {
+  for (const alan of alanlar) {
+    const eski = alan.eski === null || alan.eski === undefined ? '' : String(alan.eski);
+    const yeni = alan.yeni === null || alan.yeni === undefined ? '' : String(alan.yeni);
+    if (eski === yeni) continue;
+    aktiviteEkle(db, {
+      ...kayit,
+      aciklama: alan.aciklama,
+      eskiDeger: eski,
+      yeniDeger: yeni,
+    });
+  }
+}
+
+function bildirimEkle(db, kullaniciId, baslik, mesaj, tetkikId, baglanti = `/tetkik/${tetkikId}`) {
   db.prepare(
     `INSERT INTO bildirimler (kullanici_id, tur, baslik, mesaj, baglanti, dokuman_id)
      VALUES (?, 'tetkik', ?, ?, ?, NULL)`
@@ -108,7 +122,7 @@ function bildirimEkle(db, kullaniciId, baslik, mesaj, tetkikId) {
     kullaniciId,
     String(baslik).slice(0, 200),
     String(mesaj || '').slice(0, 500),
-    `/tetkik/${tetkikId}`
+    String(baglanti || `/tetkik/${tetkikId}`).slice(0, 500)
   );
 }
 
@@ -498,9 +512,14 @@ function tetkikRotalariniKur(app, { db, auth, mail, config }) {
     const filtreler = filtreleriCoz(req, Number(bugun.slice(0, 4)));
     const liste = tetkikListesi(db, { kullanici: req.kullanici, tamErisim, filtreler });
     const ozet = tetkikOzeti(db, req.kullanici, tamErisim, filtreler.yil);
+    const yilErisim = tetkik.tetkikGorunurlukSql(req.kullanici, tamErisim);
     const yillar = db
-      .prepare('SELECT DISTINCT yil FROM ic_tetkikler ORDER BY yil DESC')
-      .all()
+      .prepare(
+        `SELECT DISTINCT t.yil FROM ic_tetkikler t
+         WHERE ${yilErisim.sql}
+         ORDER BY t.yil DESC`
+      )
+      .all(...yilErisim.parametreler)
       .map((satir) => Number(satir.yil));
     if (!yillar.includes(filtreler.yil)) yillar.unshift(filtreler.yil);
     res.render('tetkik', {
@@ -790,6 +809,14 @@ function tetkikRotalariniKur(app, { db, auth, mail, config }) {
     if (kayit.durum === 'tamamlandi') {
       return yonlendir(res, `/tetkik/${kayit.id}`, 'hata', 'Tamamlanmış iç tetkik kaydı düzenlenemez.');
     }
+    if (Number(metin(req.body.yil)) !== Number(kayit.yil)) {
+      return yonlendir(
+        res,
+        `/tetkik/${kayit.id}`,
+        'hata',
+        'Denetim yılı ve referans numarası oluşturulduktan sonra değiştirilemez.'
+      );
+    }
     const kontrol = planDegerleriniDogrula(db, req.body, kayit.yil);
     if (kontrol.hata) return yonlendir(res, `/tetkik/${kayit.id}`, 'hata', kontrol.hata);
     const degerler = kontrol.degerler;
@@ -853,17 +880,27 @@ function tetkikRotalariniKur(app, { db, auth, mail, config }) {
         `${degerler.baslik} planının baş denetçiliği size verildi.`,
         kayit.id
       );
-      aktiviteEkle(db, {
+      degisiklikleriKaydet(db, {
         modul: 'tetkik',
         islem: 'plan_guncelle',
         kayitTipi: 'ic_tetkik',
         kayitId: kayit.id,
         referansNo: kayit.kod,
         kullaniciId: req.kullanici.id,
-        aciklama: 'İç tetkik plan künyesi güncellendi.',
-        eskiDeger: kayit.baslik,
-        yeniDeger: degerler.baslik,
-      });
+      }, [
+        { eski: kayit.baslik, yeni: degerler.baslik, aciklama: 'İç tetkik plan başlığı güncellendi.' },
+        { eski: kayit.amac, yeni: degerler.amac, aciklama: 'İç tetkik amacı güncellendi.' },
+        { eski: kayit.kapsam, yeni: degerler.kapsam, aciklama: 'İç tetkik kapsamı güncellendi.' },
+        { eski: kayit.yontem, yeni: degerler.yontem, aciklama: 'İç tetkik yöntemi güncellendi.' },
+        { eski: kayit.departman_id, yeni: degerler.departman_id, aciklama: 'İç tetkik departmanı güncellendi.' },
+        { eski: kayit.planlanan_tarih, yeni: degerler.planlanan_tarih, aciklama: 'İç tetkik plan tarihi güncellendi.' },
+        { eski: kayit.checklist_id, yeni: degerler.checklist_id, aciklama: 'İç tetkik kontrol listesi güncellendi.' },
+        {
+          eski: eskiBasDenetci?.kullanici_id || '',
+          yeni: degerler.bas_denetci_id,
+          aciklama: 'İç tetkik baş denetçisi güncellendi.',
+        },
+      ]);
       db.exec('COMMIT');
     } catch (hata) {
       db.exec('ROLLBACK');
@@ -896,6 +933,9 @@ function tetkikRotalariniKur(app, { db, auth, mail, config }) {
       return yonlendir(res, `/tetkik/${kayit.id}`, 'hata', 'Geçerli bir denetçi durumu seçin.');
     }
 
+    const eskiAtama = db
+      .prepare('SELECT gorev, durum FROM ic_tetkik_denetcileri WHERE tetkik_id = ? AND kullanici_id = ?')
+      .get(kayit.id, kullanici.id);
     const simdi = new Date().toISOString();
     db.exec('BEGIN IMMEDIATE');
     try {
@@ -940,16 +980,25 @@ function tetkikRotalariniKur(app, { db, auth, mail, config }) {
         `${tetkik.denetciGorevEtiketi(gorev)} · ${kayit.baslik}`,
         kayit.id
       );
-      aktiviteEkle(db, {
+      degisiklikleriKaydet(db, {
         modul: 'tetkik',
         islem: 'denetci_atama',
         kayitTipi: 'ic_tetkik',
         kayitId: kayit.id,
         referansNo: kayit.kod,
         kullaniciId: req.kullanici.id,
-        aciklama: `${kullanici.ad} ${tetkik.denetciGorevEtiketi(gorev)} olarak atandı; durum: ${tetkik.denetciDurumEtiketi(durum)}.`,
-        yeniDeger: durum,
-      });
+      }, [
+        {
+          eski: eskiAtama?.gorev || '',
+          yeni: gorev,
+          aciklama: `${kullanici.ad} denetçi görevi güncellendi.`,
+        },
+        {
+          eski: eskiAtama?.durum || '',
+          yeni: durum,
+          aciklama: `${kullanici.ad} denetçi atama durumu güncellendi.`,
+        },
+      ]);
       db.exec('COMMIT');
     } catch (hata) {
       db.exec('ROLLBACK');
@@ -1011,13 +1060,17 @@ function tetkikRotalariniKur(app, { db, auth, mail, config }) {
       const bulgular = bulgularGetir(db, kayit.id);
       const uygunsuzlukMaddeleri = maddeler.filter((madde) => ['minor', 'major'].includes(madde.sonuc));
       for (const madde of uygunsuzlukMaddeleri) {
-        const bulguVar = bulgular.some((bulgu) => Number(bulgu.madde_id) === Number(madde.id));
+        const bulguVar = bulgular.some(
+          (bulgu) =>
+            Number(bulgu.madde_id) === Number(madde.id) &&
+            bulgu.sonuc === madde.sonuc
+        );
         if (!bulguVar) {
           return yonlendir(
             res,
             `/tetkik/${kayit.id}`,
             'hata',
-            `İç tetkik tamamlanamaz: ${madde.sira}. madde için uygunsuzluk bulgusu kaydedilmeli.`
+            `İç tetkik tamamlanamaz: ${madde.sira}. madde için ${tetkik.sonucEtiketi(madde.sonuc)} sınıfında bulgu kaydedilmeli.`
           );
         }
       }
@@ -1128,17 +1181,35 @@ function tetkikRotalariniKur(app, { db, auth, mail, config }) {
              degerlendiren_id = ?, degerlendirme_tarihi = ?
          WHERE id = ? AND tetkik_id = ?`
       ).run(sonuc, puan, bulguAciklama, kanit, req.kullanici.id, simdi, madde.id, kayit.id);
-      aktiviteEkle(db, {
+      degisiklikleriKaydet(db, {
         modul: 'tetkik',
         islem: 'madde_degerlendir',
         kayitTipi: 'ic_tetkik',
         kayitId: kayit.id,
         referansNo: kayit.kod,
         kullaniciId: req.kullanici.id,
-        aciklama: `${madde.sira}. madde değerlendirildi: ${tetkik.sonucEtiketi(sonuc)} (${puan} puan).`,
-        eskiDeger: madde.sonuc || '',
-        yeniDeger: sonuc,
-      });
+      }, [
+        {
+          eski: madde.sonuc || '',
+          yeni: sonuc,
+          aciklama: `${madde.sira}. madde sonucu güncellendi.`,
+        },
+        {
+          eski: madde.puan,
+          yeni: puan,
+          aciklama: `${madde.sira}. madde puanı güncellendi.`,
+        },
+        {
+          eski: madde.bulgu_aciklama || '',
+          yeni: bulguAciklama,
+          aciklama: `${madde.sira}. madde açıklaması güncellendi.`,
+        },
+        {
+          eski: madde.kanit || '',
+          yeni: kanit,
+          aciklama: `${madde.sira}. madde kanıtı güncellendi.`,
+        },
+      ]);
       db.exec('COMMIT');
     } catch (hata) {
       db.exec('ROLLBACK');
@@ -1295,7 +1366,7 @@ function tetkikRotalariniKur(app, { db, auth, mail, config }) {
         const mevcut = db.prepare('SELECT kod FROM dof_kayitlari WHERE id = ?').get(guncelBulgu.dof_id);
         return yonlendir(res, `/tetkik/${kayit.id}`, 'bilgi', `Bu bulgu zaten ${mevcut?.kod || 'DÖF'} kaydına bağlı.`);
       }
-      dofKodu = dof.dofKoduUret(db, Number(kayit.yil));
+      dofKodu = dof.dofKoduUret(db, dof.dofYili(bulgu.tespit_tarihi, Number(kayit.yil)));
       const tanim = `[${kayit.kod} / ${bulgu.kod}] ${bulgu.tanim}`;
       const bilgi = db
         .prepare(
@@ -1342,7 +1413,14 @@ function tetkikRotalariniKur(app, { db, auth, mail, config }) {
       .prepare('SELECT id FROM kullanicilar WHERE aktif = 1 AND departman_id = ? AND id <> ?')
       .all(bulgu.departman_id || kayit.departman_id, req.kullanici.id);
     for (const kisi of kisiler) {
-      bildirimEkle(db, kisi.id, `Yeni DÖF açıldı: ${dofKodu}`, `${kayit.kod} / ${bulgu.kod} bulgusundan oluşturuldu.`, kayit.id);
+      bildirimEkle(
+        db,
+        kisi.id,
+        `Yeni DÖF açıldı: ${dofKodu}`,
+        `${kayit.kod} / ${bulgu.kod} bulgusundan oluşturuldu.`,
+        kayit.id,
+        `/dof/${dofId}`
+      );
     }
 
     let epostaAdet = 0;

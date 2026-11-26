@@ -1208,6 +1208,11 @@ function dofRotalariniKur(app, { db, auth, mail, config }) {
              kapanis_tarihi = ?, guncelleme_tarihi = ?
          WHERE id = ?`
       ).run(etkinlikNotu, req.kullanici.id, simdi, simdi, kayit.id);
+      db.prepare(
+        `UPDATE ic_tetkik_bulgulari
+         SET durum = 'kapandi', guncelleme_tarihi = ?
+         WHERE dof_id = ?`
+      ).run(simdi, kayit.id);
 
       if (kayit.olusturan_id && Number(kayit.olusturan_id) !== Number(req.kullanici.id)) {
         bildirimEkle(
